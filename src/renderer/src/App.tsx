@@ -1,34 +1,29 @@
-import Versions from './components/Versions'
-import electronLogo from './assets/electron.svg'
+import { useState } from 'react'
+import HomePage from './pages/HomePage'
+import LevelsPage from './pages/LevelsPage'
+import ShopPage from './pages/ShopPage'
+import ProfilePage from './pages/ProfilePage'
+
+type Page = 'home' | 'levels' | 'shop' | 'profile'
 
 function App(): React.JSX.Element {
-  const ipcHandle = (): void => window.electron.ipcRenderer.send('ping')
+  const [currentPage, setCurrentPage] = useState<Page>('home')
+
+  const navigateTo = (page: Page) => {
+    setCurrentPage(page)
+  }
+
+  const goHome = () => {
+    setCurrentPage('home')
+  }
 
   return (
-    <>
-      <img alt="logo" className="logo" src={electronLogo} />
-      <div className="creator">Powered by electron-vite</div>
-      <div className="text">
-        Build an Electron app with <span className="react">React</span>
-        &nbsp;and <span className="ts">TypeScript</span>
-      </div>
-      <p className="tip">
-        Please try pressing <code>F12</code> to open the devTool
-      </p>
-      <div className="actions">
-        <div className="action">
-          <a href="https://electron-vite.org/" target="_blank" rel="noreferrer">
-            Documentation
-          </a>
-        </div>
-        <div className="action">
-          <a target="_blank" rel="noreferrer" onClick={ipcHandle}>
-            Send IPC
-          </a>
-        </div>
-      </div>
-      <Versions></Versions>
-    </>
+    <div className="app-container">
+      {currentPage === 'home' && <HomePage onNavigate={navigateTo} />}
+      {currentPage === 'levels' && <LevelsPage onBack={goHome} />}
+      {currentPage === 'shop' && <ShopPage onBack={goHome} />}
+      {currentPage === 'profile' && <ProfilePage onBack={goHome} />}
+    </div>
   )
 }
 

@@ -6,10 +6,12 @@ import icon from '../../resources/icon.png?asset'
 function createWindow(): void {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
-    width: 900,
-    height: 670,
+    width: 1000,
+    height: 700,
     show: false,
     autoHideMenuBar: true,
+    title: 'Import AI',
+    backgroundColor: '#1e3c72',
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -22,7 +24,12 @@ function createWindow(): void {
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url)
+    // 只打开 http/https 链接
+    if (details.url.startsWith('http://') || details.url.startsWith('https://')) {
+      shell.openExternal(details.url).catch((err) => {
+        console.error('Failed to open external link:', err)
+      })
+    }
     return { action: 'deny' }
   })
 
