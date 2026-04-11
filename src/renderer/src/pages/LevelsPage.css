@@ -1,0 +1,119 @@
+.levels-page {
+  width: 100%;
+  height: 100vh;
+  padding: 40px;
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 40px;
+}
+
+.back-button {
+  padding: 10px 20px;
+  font-size: 16px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: var(--ev-c-text-1);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.back-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateX(-4px);
+}
+
+.page-title {
+  font-size: 36px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--ev-c-text-1);
+}
+
+.levels-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.level-card {
+  position: relative;
+  padding: 24px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(102, 126, 234, 0.3);
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.level-card:hover:not(.locked) {
+  transform: translateY(-4px);
+  border-color: #667eea;
+  box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3);
+}
+
+.level-card.locked {
+  opacity: 0.5;
+  cursor: not-allowed;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.level-number {
+  font-size: 14px;
+  color: #667eea;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.level-name {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--ev-c-text-1);
+  margin: 0 0 12px 0;
+}
+
+.level-desc {
+  font-size: 14px;
+  color: var(--ev-c-text-2);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.lock-icon {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  font-size: 24px;
+}
+
+.play-icon {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  font-size: 20px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.level-card:hover:not(.locked) .play-icon {
+  opacity: 1;
+}
+
+@media (max-width: 768px) {
+  .levels-page {
+    padding: 20px;
+  }
+
+  .levels-grid {
+    grid-template-columns: 1fr;
+  }
+}

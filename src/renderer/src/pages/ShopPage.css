@@ -1,0 +1,135 @@
+.shop-page {
+  width: 100%;
+  height: 100vh;
+  padding: 40px;
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
+.coins-display {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, rgba(240, 147, 251, 0.2) 0%, rgba(245, 87, 108, 0.2) 100%);
+  border: 2px solid #f093fb;
+  border-radius: 12px;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.coin-icon {
+  font-size: 24px;
+}
+
+.coin-amount {
+  color: var(--ev-c-text-1);
+}
+
+.shop-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.shop-item {
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(240, 147, 251, 0.3);
+  border-radius: 16px;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.shop-item:hover {
+  transform: translateY(-4px);
+  border-color: #f093fb;
+  box-shadow: 0 8px 16px rgba(240, 147, 251, 0.3);
+}
+
+.item-icon {
+  font-size: 48px;
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.item-name {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--ev-c-text-1);
+  margin: 0 0 12px 0;
+  text-align: center;
+}
+
+.item-desc {
+  font-size: 14px;
+  color: var(--ev-c-text-2);
+  line-height: 1.6;
+  margin: 0 0 20px 0;
+  text-align: center;
+  flex-grow: 1;
+}
+
+.item-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: auto;
+}
+
+.item-price {
+  font-size: 18px;
+  font-weight: 600;
+  color: #f093fb;
+}
+
+.buy-button {
+  padding: 8px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.buy-button:hover:not(:disabled) {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(240, 147, 251, 0.4);
+}
+
+.buy-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--ev-c-text-2);
+}
+
+@media (max-width: 768px) {
+  .shop-page {
+    padding: 20px;
+  }
+
+  .shop-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .page-header {
+    flex-wrap: wrap;
+  }
+
+  .coins-display {
+    order: 3;
+    width: 100%;
+    justify-content: center;
+    margin-top: 16px;
+  }
+}
