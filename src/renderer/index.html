@@ -3,10 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <title>Import AI - AI训练游戏</title>
-    <!-- https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP -->
+    <!-- Content Security Policy - 允许连接到 Supabase -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://*.supabase.co"
     />
   </head>
 

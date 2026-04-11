@@ -1,4 +1,6 @@
-import React from 'react'
+import React, { useState } from 'react'
+import { useAuth } from '../contexts/AuthContext'
+import ConfirmDialog from '../components/ConfirmDialog'
 import './ProfilePage.css'
 
 interface ProfilePageProps {
@@ -6,12 +8,20 @@ interface ProfilePageProps {
 }
 
 const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
+  const { user, logout } = useAuth()
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
+
+  if (!user) {
+    return null
+  }
+
   const userStats = {
-    name: 'AI训练师',
-    level: 5,
+    name: user.username,
+    level: user.level,
+    experience: user.experience,
+    coins: user.coins,
     completedLevels: 2,
     totalLevels: 8,
-    coins: 500,
     achievements: [
       { id: 1, name: '初出茅庐', desc: '完成第一个关卡', unlocked: true, icon: '🎯' },
       { id: 2, name: '数据大师', desc: '完成所有数据相关关卡', unlocked: true, icon: '📊' },
@@ -20,10 +30,17 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
     ]
   }
 
-  const handleReset = () => {
-    if (confirm('确定要重置所有进度吗？此操作不可恢复！')) {
-      alert('进度已重置')
-    }
+  const handleLogoutClick = () => {
+    setShowLogoutConfirm(true)
+  }
+
+  const handleLogoutConfirm = () => {
+    setShowLogoutConfirm(false)
+    logout()
+  }
+
+  const handleLogoutCancel = () => {
+    setShowLogoutConfirm(false)
   }
 
   return (
@@ -44,6 +61,10 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
 
         <div className="stats-card">
           <h3 className="card-title">📈 学习进度</h3>
+          <div className="stat-item">
+            <span className="stat-label">经验值</span>
+            <span className="stat-value">{userStats.experience} XP</span>
+          </div>
           <div className="stat-item">
             <span className="stat-label">完成关卡</span>
             <span className="stat-value">
@@ -82,11 +103,21 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
         </div>
 
         <div className="actions-card">
-          <button className="reset-button" onClick={handleReset}>
-            🔄 重置进度
+          <button className="logout-button" onClick={handleLogoutClick}>
+            🚪 退出登录
           </button>
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={showLogoutConfirm}
+        title="退出登录"
+        message="确定要退出登录吗？退出后需要重新登录才能继续学习。"
+        confirmText="退出"
+        cancelText="取消"
+        onConfirm={handleLogoutConfirm}
+        onCancel={handleLogoutCancel}
+      />
     </div>
   )
 }
