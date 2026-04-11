@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import './HomePage.css'
 import backgroundImg from '../assets/background.jpg'
+import logoImg from '../assets/logo.png'
 
 type Page = 'home' | 'levels' | 'shop' | 'profile'
 
@@ -55,10 +56,7 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
 
       {/* Logo 和标题区域 */}
       <div className="home-header">
-        <h1 className="brand-name">
-          <span className="import-text">import</span>
-          <span className="ai-highlight">ai</span>
-        </h1>
+        <img src={logoImg} alt="import ai" className="logo-image" />
         <div className="subtitle-decoration">
           <span className="dot"></span>
           <span className="dot"></span>

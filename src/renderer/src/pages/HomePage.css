@@ -127,6 +127,14 @@
   padding: 20px;
 }
 
+.logo-image {
+  height: 100px;
+  width: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+  mix-blend-mode: screen;
+}
+
 @keyframes fadeInDown {
   from {
     opacity: 0;
