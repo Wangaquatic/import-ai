@@ -5,8 +5,9 @@ import HomePage from './pages/HomePage'
 import LevelsPage from './pages/LevelsPage'
 import ShopPage from './pages/ShopPage'
 import ProfilePage from './pages/ProfilePage'
+import TutorialPage from './pages/TutorialPage'
 
-type Page = 'home' | 'levels' | 'shop' | 'profile'
+type Page = 'home' | 'levels' | 'shop' | 'profile' | 'tutorial'
 
 function AppContent(): React.JSX.Element {
   const [currentPage, setCurrentPage] = useState<Page>('home')
@@ -56,7 +57,8 @@ function AppContent(): React.JSX.Element {
         zIndex: 1
       }}>
         {currentPage === 'home' && <HomePage onNavigate={navigateTo} />}
-        {currentPage === 'levels' && <LevelsPage onBack={goHome} />}
+        {currentPage === 'levels' && <LevelsPage onBack={goHome} onNavigate={navigateTo} />}
+        {currentPage === 'tutorial' && <TutorialPage onBack={() => navigateTo('levels')} />}
         {currentPage === 'shop' && <ShopPage onBack={goHome} />}
         {currentPage === 'profile' && <ProfilePage onBack={goHome} />}
       </div>

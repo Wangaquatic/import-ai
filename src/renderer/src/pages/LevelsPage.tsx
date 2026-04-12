@@ -3,10 +3,11 @@ import './LevelsPage.css'
 
 interface LevelsPageProps {
   onBack: () => void
+  onNavigate: (page: 'tutorial') => void
 }
 
 const levels = [
-  { id: 1, name: '训练与预测', desc: '理解模型从数据中学习的能力', locked: false },
+  { id: 1, name: '教学关卡', desc: '从零开始，了解AI训练的基本概念', locked: false, tutorial: true },
   { id: 2, name: '欠拟合', desc: '识别模型过于简单的问题', locked: false },
   { id: 3, name: '过拟合', desc: '识别模型复杂度过高的问题', locked: true },
   { id: 4, name: '决策树', desc: '掌握树模型的分类逻辑', locked: true },
@@ -16,7 +17,7 @@ const levels = [
   { id: 8, name: '超参数调优', desc: '体验参数对模型的影响', locked: true }
 ]
 
-const LevelsPage: React.FC<LevelsPageProps> = ({ onBack }) => {
+const LevelsPage: React.FC<LevelsPageProps> = ({ onBack, onNavigate }) => {
   return (
     <div className="levels-page">
       <div className="page-header">
@@ -30,8 +31,12 @@ const LevelsPage: React.FC<LevelsPageProps> = ({ onBack }) => {
         {levels.map((level) => (
           <div
             key={level.id}
-            className={`level-card ${level.locked ? 'locked' : ''}`}
-            onClick={() => !level.locked && alert(`开始关卡 ${level.id}`)}
+            className={`level-card ${level.locked ? 'locked' : ''} ${level.tutorial ? 'tutorial' : ''}`}
+            onClick={() => {
+              if (level.locked) return
+              if (level.tutorial) onNavigate('tutorial')
+              else alert(`开始关卡 ${level.id}`)
+            }}
           >
             <div className="level-number">关卡 {level.id}</div>
             <h3 className="level-name">{level.name}</h3>

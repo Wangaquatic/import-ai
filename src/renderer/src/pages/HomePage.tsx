@@ -54,30 +54,25 @@ const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
         <div className="circle circle-3"></div>
       </div>
 
-      {/* Logo 和标题区域 */}
-      <div className="home-header">
-        <img src={logoImg} alt="import ai" className="logo-image" />
-        <div className="subtitle-decoration">
-          <span className="dot"></span>
-          <span className="dot"></span>
-          <span className="dot"></span>
+      {/* Logo + Start Game 居中容器 */}
+      <div className="center-container">
+        <div className="home-header">
+          <img src={logoImg} alt="import ai" className="logo-image" />
         </div>
-      </div>
-
-      {/* Start Game 按钮 - Logo 下方 */}
-      <div className="start-game-container">
-        <button
-          className={`game-button start-game-btn ${hoveredButton === 'levels' ? 'active' : ''}`}
-          onClick={() => onNavigate('levels')}
-          onMouseEnter={() => setHoveredButton('levels')}
-          onMouseLeave={() => setHoveredButton(null)}
-        >
-          <div className="button-bg"></div>
-          <div className="button-content">
-            <span className="start-text">START GAME</span>
-          </div>
-          <div className="button-shine"></div>
-        </button>
+        <div className="start-game-container">
+          <button
+            className={`game-button start-game-btn ${hoveredButton === 'levels' ? 'active' : ''}`}
+            onClick={() => onNavigate('levels')}
+            onMouseEnter={() => setHoveredButton('levels')}
+            onMouseLeave={() => setHoveredButton(null)}
+          >
+            <div className="button-bg"></div>
+            <div className="button-content">
+              <span className="start-text">START GAME</span>
+            </div>
+            <div className="button-shine"></div>
+          </button>
+        </div>
       </div>
 
       {/* 底部按钮区域 */}

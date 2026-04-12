@@ -4,7 +4,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   padding: 40px;
   box-sizing: border-box;
   position: relative;
@@ -115,24 +115,17 @@
 
 /* Logo 和标题区域 */
 .home-header {
-  position: absolute;
-  top: 20px;
-  left: 30%;
-  transform: translateX(-50%);
   text-align: center;
-  z-index: 10;
-  animation: fadeInDown 0.8s ease-out, floatLogo 3s ease-in-out infinite;
-  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.4))
-          drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
-  padding: 20px;
+  animation: floatLogo 3s ease-in-out infinite;
+  overflow: visible;
 }
 
 .logo-image {
-  height: 100px;
+  height: 120px;
   width: auto;
   object-fit: contain;
-  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
   mix-blend-mode: screen;
+  filter: drop-shadow(0 4px 16px rgba(0, 0, 0, 0.5));
 }
 
 @keyframes fadeInDown {
@@ -281,11 +274,20 @@
 
 /* Start Game 按钮 - Logo 下方 */
 .start-game-container {
-  position: absolute;
-  top: 200px;
-  left: 50%;
   z-index: 10;
-  animation: fadeInUp 0.8s ease-out 0.4s both, floatButton 3s ease-in-out infinite 1.2s;
+}
+
+/* Logo + Start Game 공통 컨테이너 */
+.center-container {
+  position: absolute;
+  top: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  z-index: 10;
 }
 
 @keyframes floatButton {
