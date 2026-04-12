@@ -190,29 +190,22 @@ const TutorialPage: React.FC<TutorialPageProps> = ({ onBack }) => {
           return { ...p, progress: newProgress, done: newProgress >= 1 }
         })
 
-        // 统计正确方块到达数量，根据连接方向判断
+        // 统计正确方块到达数量，根据 progress 实时计算（progress>=0 表示已出发）
         const out1CorrectColor = out1IsCorrect ? '#ef4444' : '#3b82f6'
         const out2CorrectColor = out2IsCorrect ? '#3b82f6' : '#ef4444'
-        const correctTotal = out1IsCorrect ? 15 : 5
-        const correct2Total = out2IsCorrect ? 15 : 5
 
-        const out1CorrectDone = next.filter(p => p.from === 'classifier-out1' && p.color === out1CorrectColor && p.done).length
-        const out2CorrectDone = next.filter(p => p.from === 'classifier-out2' && p.color === out2CorrectColor && p.done).length
+        const out1CorrectProgress = next
+          .filter(p => p.from === 'classifier-out1' && p.color === out1CorrectColor && p.progress >= 0)
+          .reduce((sum, p) => sum + Math.min(p.progress, 1), 0)
+        const out2CorrectProgress = next
+          .filter(p => p.from === 'classifier-out2' && p.color === out2CorrectColor && p.progress >= 0)
+          .reduce((sum, p) => sum + Math.min(p.progress, 1), 0)
 
-        const targetTo = out1Conn?.to
-        const noTargetTo = out2Conn?.to
+        const maxProgress1 = out1IsCorrect ? 15 : 5
+        const maxProgress2 = out2IsCorrect ? 15 : 5
 
-        // 柱状图显示在对应图片上
-        if (targetTo === 'target-in') {
-          setTargetProgress(Math.min(out1CorrectDone / 20 * (out1IsCorrect ? 0.75 : 0.25), out1IsCorrect ? 0.75 : 0.25))
-        } else if (targetTo === 'no-target-in') {
-          setNoTargetProgress(Math.min(out1CorrectDone / 20 * (out1IsCorrect ? 0.75 : 0.25), out1IsCorrect ? 0.75 : 0.25))
-        }
-        if (noTargetTo === 'no-target-in') {
-          setNoTargetProgress(Math.min(out2CorrectDone / 20 * (out2IsCorrect ? 0.75 : 0.25), out2IsCorrect ? 0.75 : 0.25))
-        } else if (noTargetTo === 'target-in') {
-          setTargetProgress(Math.min(out2CorrectDone / 20 * (out2IsCorrect ? 0.75 : 0.25), out2IsCorrect ? 0.75 : 0.25))
-        }
+        setTargetProgress(Math.min(out1CorrectProgress / maxProgress1 * 0.75, 0.75))
+        setNoTargetProgress(Math.min(out2CorrectProgress / maxProgress2 * 0.75, 0.75))
 
         // 右边两条线都完成后，左边停止
         const rightParticles = next.filter(p => p.from === 'classifier-out1' || p.from === 'classifier-out2')

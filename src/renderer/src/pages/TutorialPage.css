@@ -9,6 +9,18 @@
   background: linear-gradient(135deg, #0f3460 0%, #1a5276 40%, #1f618d 70%, #0d2137 100%);
 }
 
+.tutorial-page::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px);
+  background-size: 100px 100px;
+  pointer-events: none;
+  z-index: 0;
+}
+
 /* 背景模糊层 */
 .bg-blur-layer {
   display: none;
