@@ -8,6 +8,7 @@ import noTargetImg from '../assets/no-target.png'
 
 interface TutorialPageProps {
   onBack: () => void
+  onNextLevel: () => void
 }
 
 interface Point { x: number; y: number }
@@ -19,7 +20,7 @@ const SAVE_KEY = 'tutorial_saved_state'
 const COINS_KEY = 'player_coins'
 const TUTORIAL_REWARD_KEY = 'tutorial_reward_claimed'
 
-const TutorialPage: React.FC<TutorialPageProps> = ({ onBack }) => {
+const TutorialPage: React.FC<TutorialPageProps> = ({ onBack, onNextLevel }) => {
   const particles = React.useMemo(() => {
     const binaries = ['0', '1', '01', '10', '001', '101', '110', '011', '100', '111', '0101', '1010', '1100', '0011']
     return Array.from({ length: 15 }, (_, i) => ({
@@ -49,6 +50,8 @@ const TutorialPage: React.FC<TutorialPageProps> = ({ onBack }) => {
   const [elapsed, setElapsed] = useState(0)
   const [coins, setCoins] = useState(() => parseInt(localStorage.getItem(COINS_KEY) || '0'))
   const [showReward, setShowReward] = useState(false)
+  const [testResult, setTestResult] = useState<'pass' | 'fail' | null>(null)
+  const [passed, setPassed] = useState(false)
   const [infoModal, setInfoModal] = useState<'input' | 'classifier' | null>(null)
   const rewardClaimed = React.useRef(!!localStorage.getItem(TUTORIAL_REWARD_KEY))
   const totalRef = useRef({ red: 0, blue: 0 })
@@ -190,22 +193,14 @@ const TutorialPage: React.FC<TutorialPageProps> = ({ onBack }) => {
           return { ...p, progress: newProgress, done: newProgress >= 1 }
         })
 
-        // 统计正确方块到达数量，根据 progress 实时计算（progress>=0 表示已出发）
-        const out1CorrectColor = out1IsCorrect ? '#ef4444' : '#3b82f6'
-        const out2CorrectColor = out2IsCorrect ? '#3b82f6' : '#ef4444'
+        // 柱状图：用已出发方块数/总数，每出发一个方块涨一格，完全匀速
+        const rightAll = next.filter(p => p.from === 'classifier-out1' || p.from === 'classifier-out2')
+        const rightTotal = rightAll.length || 1
+        const rightStarted = rightAll.filter(p => p.progress > 0).length
+        const ratio = rightStarted / rightTotal
 
-        const out1CorrectProgress = next
-          .filter(p => p.from === 'classifier-out1' && p.color === out1CorrectColor && p.progress >= 0)
-          .reduce((sum, p) => sum + Math.min(p.progress, 1), 0)
-        const out2CorrectProgress = next
-          .filter(p => p.from === 'classifier-out2' && p.color === out2CorrectColor && p.progress >= 0)
-          .reduce((sum, p) => sum + Math.min(p.progress, 1), 0)
-
-        const maxProgress1 = out1IsCorrect ? 15 : 5
-        const maxProgress2 = out2IsCorrect ? 15 : 5
-
-        setTargetProgress(Math.min(out1CorrectProgress / maxProgress1 * 0.75, 0.75))
-        setNoTargetProgress(Math.min(out2CorrectProgress / maxProgress2 * 0.75, 0.75))
+        setTargetProgress(Math.min(ratio * (out1IsCorrect ? 0.75 : 0.25), out1IsCorrect ? 0.75 : 0.25))
+        setNoTargetProgress(Math.min(ratio * (out2IsCorrect ? 0.75 : 0.25), out2IsCorrect ? 0.75 : 0.25))
 
         // 右边两条线都完成后，左边停止
         const rightParticles = next.filter(p => p.from === 'classifier-out1' || p.from === 'classifier-out2')
@@ -216,11 +211,14 @@ const TutorialPage: React.FC<TutorialPageProps> = ({ onBack }) => {
 
         if (final.every(p => p.done)) {
           setTesting(false)
+          const isPass = out1IsCorrect && out2IsCorrect
           setTargetProgress(out1IsCorrect ? 0.75 : 0.25)
           setNoTargetProgress(out2IsCorrect ? 0.75 : 0.25)
           if (timerRef.current) clearInterval(timerRef.current)
+          setTestResult(isPass ? 'pass' : 'fail')
+          if (isPass) setPassed(true)
           // 发放金币奖励（只能一次）
-          if (!rewardClaimed.current) {
+          if (isPass && !rewardClaimed.current) {
             rewardClaimed.current = true
             localStorage.setItem(TUTORIAL_REWARD_KEY, '1')
             const newCoins = parseInt(localStorage.getItem(COINS_KEY) || '0') + 100
@@ -326,6 +324,9 @@ const TutorialPage: React.FC<TutorialPageProps> = ({ onBack }) => {
       {/* 垃圾桶 */}
       <button className="trash-btn" onClick={handleClearLines} title="清除所有连线">🗑️</button>
 
+      {/* 下一关 - 只有达标才显示 */}
+      {passed && <button className="next-level-btn" onClick={onNextLevel}>下一关 →</button>}
+
       {/* 速度控制 */}
       <button className="speed-btn" onClick={handleSpeedChange}>
         ▶▶ {speedMultiplier.toFixed(1)}x
@@ -421,6 +422,30 @@ const TutorialPage: React.FC<TutorialPageProps> = ({ onBack }) => {
           </div>
         </div>
       </div>
+
+      {/* 测试结果弹窗 */}
+      {testResult && (
+        <div className="info-overlay" onClick={() => setTestResult(null)}>
+          <div className="info-modal result-modal" onClick={e => e.stopPropagation()}>
+            {testResult === 'pass' ? (
+              <>
+                <div className="result-icon">✅</div>
+                <h3 className="info-title" style={{ color: '#34d399' }}>测试通过！</h3>
+                <p className="info-desc">正确率达到 75%，连接方式正确！你已解锁下一关。</p>
+              </>
+            ) : (
+              <>
+                <div className="result-icon">❌</div>
+                <h3 className="info-title" style={{ color: '#f87171' }}>未达标</h3>
+                <p className="info-desc">正确率不足 75%，请检查节点连接是否正确，然后重新测试。</p>
+              </>
+            )}
+            <button className="info-close" onClick={() => setTestResult(null)}>
+              {testResult === 'pass' ? '太棒了！' : '再试一次'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 说明弹窗 */}
       {infoModal && (
