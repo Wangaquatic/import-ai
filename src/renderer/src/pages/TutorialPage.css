@@ -77,6 +77,42 @@
   transform: translateX(-4px);
 }
 
+/* 隐藏关卡按钮 */
+.hidden-level-btn {
+  position: fixed;
+  bottom: 30px;
+  left: 30px;
+  width: 50px;
+  height: 50px;
+  font-size: 24px;
+  background: rgba(139, 92, 246, 0.2);
+  border: 2px solid rgba(139, 92, 246, 0.4);
+  border-radius: 50%;
+  cursor: pointer;
+  z-index: 20;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: hiddenPulse 3s infinite;
+}
+
+.hidden-level-btn:hover {
+  background: rgba(139, 92, 246, 0.4);
+  border-color: rgba(139, 92, 246, 0.7);
+  transform: scale(1.15) rotate(10deg);
+  animation: none;
+}
+
+@keyframes hiddenPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(139, 92, 246, 0);
+  }
+}
+
 /* 垃圾桶按钮 */
 .trash-btn {
   position: fixed;

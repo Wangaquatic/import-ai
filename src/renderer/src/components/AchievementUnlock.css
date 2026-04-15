@@ -1,0 +1,100 @@
+.achievement-unlock {
+  position: fixed;
+  top: 80px;
+  right: -400px;
+  z-index: 1000;
+  transition: right 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.achievement-unlock.visible {
+  right: 30px;
+}
+
+.achievement-unlock-content {
+  width: 350px;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.95) 0%, rgba(79, 70, 229, 0.95) 100%);
+  border: 2px solid rgba(167, 139, 250, 0.8);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 10px 40px rgba(139, 92, 246, 0.5), 0 0 20px rgba(167, 139, 250, 0.3);
+  backdrop-filter: blur(10px);
+  animation: glow 2s ease-in-out infinite;
+}
+
+@keyframes glow {
+  0%, 100% {
+    box-shadow: 0 10px 40px rgba(139, 92, 246, 0.5), 0 0 20px rgba(167, 139, 250, 0.3);
+  }
+  50% {
+    box-shadow: 0 10px 40px rgba(139, 92, 246, 0.7), 0 0 30px rgba(167, 139, 250, 0.5);
+  }
+}
+
+.achievement-unlock-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.achievement-unlock-trophy {
+  font-size: 24px;
+  animation: bounce 1s ease-in-out infinite;
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+.achievement-unlock-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #ffffff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.achievement-unlock-body {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.achievement-unlock-icon {
+  font-size: 48px;
+  flex-shrink: 0;
+  animation: rotate 3s linear infinite;
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.achievement-unlock-info {
+  flex: 1;
+}
+
+.achievement-unlock-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 6px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.achievement-unlock-desc {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.4;
+}

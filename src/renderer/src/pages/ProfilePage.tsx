@@ -15,6 +15,21 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
     return null
   }
 
+  function checkHiddenLevelsComplete(): boolean {
+    const completed = parseInt(localStorage.getItem('hidden_levels_completed') || '0')
+    return completed >= 3
+  }
+
+  // 检查成就状态并输出调试信息
+  const paramMasterUnlocked = !!localStorage.getItem('achievement_param_master')
+  const hiddenExplorerUnlocked = checkHiddenLevelsComplete()
+  
+  console.log('📊 个人中心 - 成就状态:', {
+    参数调优大师: paramMasterUnlocked,
+    隐藏探索者: hiddenExplorerUnlocked,
+    隐藏关卡完成数: localStorage.getItem('hidden_levels_completed')
+  })
+
   const userStats = {
     name: user.username,
     level: user.level,
@@ -26,7 +41,23 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
       { id: 1, name: '初出茅庐', desc: '完成第一个关卡', unlocked: true, icon: '🎯' },
       { id: 2, name: '数据大师', desc: '完成所有数据相关关卡', unlocked: true, icon: '📊' },
       { id: 3, name: '模型专家', desc: '完成所有模型关卡', unlocked: false, icon: '🧠' },
-      { id: 4, name: '完美主义者', desc: '所有关卡获得满分', unlocked: false, icon: '⭐' }
+      { id: 4, name: '完美主义者', desc: '所有关卡获得满分', unlocked: false, icon: '⭐' },
+      { 
+        id: 5, 
+        name: '参数调优大师', 
+        desc: '在教学关卡隐藏关卡中达到最高正确率（95%）', 
+        unlocked: paramMasterUnlocked, 
+        icon: '🔬',
+        hidden: false
+      },
+      { 
+        id: 6, 
+        name: '隐藏探索者', 
+        desc: '完成所有隐藏关卡（3/3）', 
+        unlocked: hiddenExplorerUnlocked, 
+        icon: '🕵️',
+        hidden: true
+      }
     ]
   }
 
@@ -89,14 +120,21 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
             {userStats.achievements.map((achievement) => (
               <div
                 key={achievement.id}
-                className={`achievement-item ${achievement.unlocked ? 'unlocked' : 'locked'}`}
+                className={`achievement-item ${achievement.unlocked ? 'unlocked' : 'locked'} ${achievement.hidden && !achievement.unlocked ? 'hidden-achievement' : ''}`}
               >
                 <div className="achievement-icon">{achievement.icon}</div>
                 <div className="achievement-info">
-                  <div className="achievement-name">{achievement.name}</div>
-                  <div className="achievement-desc">{achievement.desc}</div>
+                  <div className="achievement-name">
+                    {achievement.hidden && !achievement.unlocked ? '???' : achievement.name}
+                  </div>
+                  <div className="achievement-desc">
+                    {achievement.hidden && !achievement.unlocked ? '完成特定条件解锁' : achievement.desc}
+                  </div>
                 </div>
                 {!achievement.unlocked && <div className="lock-overlay">🔒</div>}
+                {achievement.unlocked && achievement.hidden && (
+                  <div className="hidden-badge">隐藏</div>
+                )}
               </div>
             ))}
           </div>

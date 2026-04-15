@@ -5,6 +5,7 @@ import classifierImg from '../assets/classifier.jpg'
 import tutorialInput from '../assets/tutorial-input.png'
 import targetImg from '../assets/target.jpg'
 import noTargetImg from '../assets/no-target.png'
+import HiddenLevelModal, { type TrainingParams } from '../components/HiddenLevelModal'
 
 interface TutorialPageProps {
   onBack: () => void
@@ -19,6 +20,8 @@ interface Particle { id: number; color: string; from: string; to: string; progre
 const SAVE_KEY = 'tutorial_saved_state'
 const COINS_KEY = 'player_coins'
 const TUTORIAL_REWARD_KEY = 'tutorial_reward_claimed'
+const TUTORIAL_PASSED_KEY = 'tutorial_passed'
+const HIDDEN_PARAMS_KEY = 'tutorial_hidden_params'
 
 const TutorialPage: React.FC<TutorialPageProps> = ({ onBack, onNextLevel }) => {
   const particles = React.useMemo(() => {
@@ -51,8 +54,38 @@ const TutorialPage: React.FC<TutorialPageProps> = ({ onBack, onNextLevel }) => {
   const [coins, setCoins] = useState(() => parseInt(localStorage.getItem(COINS_KEY) || '0'))
   const [showReward, setShowReward] = useState(false)
   const [testResult, setTestResult] = useState<'pass' | 'fail' | null>(null)
-  const [passed, setPassed] = useState(false)
+  const [passed, setPassed] = useState(() => !!localStorage.getItem(TUTORIAL_PASSED_KEY))
+  const everPassed = React.useRef(!!localStorage.getItem(TUTORIAL_PASSED_KEY))
   const [infoModal, setInfoModal] = useState<'input' | 'classifier' | null>(null)
+  const [showHiddenLevel, setShowHiddenLevel] = useState(false)
+  const [hiddenParams, setHiddenParams] = useState<TrainingParams>(() => {
+    try {
+      const saved = localStorage.getItem(HIDDEN_PARAMS_KEY)
+      return saved ? JSON.parse(saved) : {
+        learningRate: 0.01,
+        batchSize: 16,
+        epochs: 10,
+        optimizer: 'SGD'
+      }
+    } catch {
+      return {
+        learningRate: 0.01,
+        batchSize: 16,
+        epochs: 10,
+        optimizer: 'SGD'
+      }
+    }
+  })
+  
+  // 检查连接是否正确
+  const isConnectionCorrect = React.useMemo(() => {
+    const out1Conn = connections.find(c => c.from === 'classifier-out1')
+    const out2Conn = connections.find(c => c.from === 'classifier-out2')
+    const out1IsCorrect = out1Conn?.to === 'target-in'
+    const out2IsCorrect = out2Conn?.to === 'no-target-in'
+    return out1IsCorrect && out2IsCorrect
+  }, [connections])
+  
   const rewardClaimed = React.useRef(!!localStorage.getItem(TUTORIAL_REWARD_KEY))
   const totalRef = useRef({ red: 0, blue: 0 })
   const speedMultiplierRef = useRef(1.0)
@@ -145,9 +178,18 @@ const TutorialPage: React.FC<TutorialPageProps> = ({ onBack, onNextLevel }) => {
     const out1IsCorrect = out1Conn?.to === 'target-in'
     const out2IsCorrect = out2Conn?.to === 'no-target-in'
 
-    // 红20蓝20，各5个分类错误（75%正确率）
-    // 如果连接错误，正确和错误互换
-    totalRef.current = { red: 15, blue: 15 }
+    // 根据隐藏参数调整准确率
+    const accuracyBonus = calculateAccuracyBonus()
+    const baseCorrectRatio = 0.75 + accuracyBonus // 基础75%，可通过隐藏参数提升或降低
+    const baseWrongRatio = 1 - baseCorrectRatio
+
+    // 计算每条线的正确和错误数量
+    const out1Correct = Math.round(20 * baseCorrectRatio)
+    const out1Wrong = 20 - out1Correct
+    const out2Correct = Math.round(20 * baseCorrectRatio)
+    const out2Wrong = 20 - out2Correct
+
+    totalRef.current = { red: out1Correct, blue: out2Correct }
 
     let id = 0
     const particles: Particle[] = []
@@ -161,10 +203,10 @@ const TutorialPage: React.FC<TutorialPageProps> = ({ onBack, onNextLevel }) => {
     }
 
     const rightDelay = -0.5
-    // out1 连线：正确时15红+5蓝，错误时5红+15蓝
+    // out1 连线：正确时使用计算的比例，错误时反转
     if (out1Conn) {
-      const correctCount = out1IsCorrect ? 15 : 5
-      const wrongCount = out1IsCorrect ? 5 : 15
+      const correctCount = out1IsCorrect ? out1Correct : out1Wrong
+      const wrongCount = out1IsCorrect ? out1Wrong : out1Correct
       const mainColor = out1IsCorrect ? '#ef4444' : '#3b82f6'
       const wrongColor = out1IsCorrect ? '#3b82f6' : '#ef4444'
       const out1Colors = [...Array(correctCount).fill(mainColor), ...Array(wrongCount).fill(wrongColor)].sort(() => Math.random() - 0.5)
@@ -172,10 +214,10 @@ const TutorialPage: React.FC<TutorialPageProps> = ({ onBack, onNextLevel }) => {
         particles.push({ id: id++, color, from: out1Conn.from, to: out1Conn.to, progress: rightDelay - i * 0.15, speed: 0.003, done: false })
       })
     }
-    // out2 连线：正确时15蓝+5红，错误时5蓝+15红
+    // out2 连线：正确时使用计算的比例，错误时反转
     if (out2Conn) {
-      const correctCount = out2IsCorrect ? 15 : 5
-      const wrongCount = out2IsCorrect ? 5 : 15
+      const correctCount = out2IsCorrect ? out2Correct : out2Wrong
+      const wrongCount = out2IsCorrect ? out2Wrong : out2Correct
       const mainColor = out2IsCorrect ? '#3b82f6' : '#ef4444'
       const wrongColor = out2IsCorrect ? '#ef4444' : '#3b82f6'
       const out2Colors = [...Array(correctCount).fill(mainColor), ...Array(wrongCount).fill(wrongColor)].sort(() => Math.random() - 0.5)
@@ -199,8 +241,8 @@ const TutorialPage: React.FC<TutorialPageProps> = ({ onBack, onNextLevel }) => {
         const rightStarted = rightAll.filter(p => p.progress > 0).length
         const ratio = rightStarted / rightTotal
 
-        setTargetProgress(Math.min(ratio * (out1IsCorrect ? 0.75 : 0.25), out1IsCorrect ? 0.75 : 0.25))
-        setNoTargetProgress(Math.min(ratio * (out2IsCorrect ? 0.75 : 0.25), out2IsCorrect ? 0.75 : 0.25))
+        setTargetProgress(Math.min(ratio * (out1IsCorrect ? baseCorrectRatio : baseWrongRatio), out1IsCorrect ? baseCorrectRatio : baseWrongRatio))
+        setNoTargetProgress(Math.min(ratio * (out2IsCorrect ? baseCorrectRatio : baseWrongRatio), out2IsCorrect ? baseCorrectRatio : baseWrongRatio))
 
         // 右边两条线都完成后，左边停止
         const rightParticles = next.filter(p => p.from === 'classifier-out1' || p.from === 'classifier-out2')
@@ -211,12 +253,24 @@ const TutorialPage: React.FC<TutorialPageProps> = ({ onBack, onNextLevel }) => {
 
         if (final.every(p => p.done)) {
           setTesting(false)
-          const isPass = out1IsCorrect && out2IsCorrect
-          setTargetProgress(out1IsCorrect ? 0.75 : 0.25)
-          setNoTargetProgress(out2IsCorrect ? 0.75 : 0.25)
+          const isPass = out1IsCorrect && out2IsCorrect && baseCorrectRatio >= 0.75
+          setTargetProgress(out1IsCorrect ? baseCorrectRatio : baseWrongRatio)
+          setNoTargetProgress(out2IsCorrect ? baseCorrectRatio : baseWrongRatio)
           if (timerRef.current) clearInterval(timerRef.current)
-          setTestResult(isPass ? 'pass' : 'fail')
-          if (isPass) setPassed(true)
+          // 已通关过：不再弹任何结果弹窗
+          if (!everPassed.current) {
+            if (isPass) {
+              everPassed.current = true
+              localStorage.setItem(TUTORIAL_PASSED_KEY, '1')
+              setPassed(true)
+              setTestResult('pass')
+            } else {
+              setTestResult('fail')
+            }
+          } else {
+            // 已通关过，静默更新 passed 状态
+            if (isPass) setPassed(true)
+          }
           // 发放金币奖励（只能一次）
           if (isPass && !rewardClaimed.current) {
             rewardClaimed.current = true
@@ -288,6 +342,56 @@ const TutorialPage: React.FC<TutorialPageProps> = ({ onBack, onNextLevel }) => {
 
   const setDotRef = (id: string) => (el: HTMLDivElement | null) => { dotRefs.current[id] = el }
 
+  // 隐藏关卡训练逻辑
+  const handleHiddenTrain = async (params: TrainingParams): Promise<number> => {
+    // 根据参数计算准确率
+    // 最优参数组合：learningRate=0.1, batchSize=32, epochs=20, optimizer=Adam
+    let accuracy = 75 // 基础准确率
+    
+    if (params.learningRate === 0.1) accuracy += 3
+    else if (params.learningRate === 0.001) accuracy -= 2
+    
+    if (params.batchSize === 32) accuracy += 3
+    else if (params.batchSize === 8) accuracy -= 2
+    
+    if (params.epochs === 20) accuracy += 4
+    else if (params.epochs === 5) accuracy -= 3
+    
+    if (params.optimizer === 'Adam') accuracy += 5
+    else if (params.optimizer === 'SGD') accuracy -= 2
+    
+    // 添加随机波动
+    accuracy += Math.random() * 2 - 1
+    
+    return Math.min(Math.max(accuracy, 60), 95)
+  }
+
+  // 保存隐藏关卡参数
+  const handleSaveHiddenParams = (params: TrainingParams) => {
+    setHiddenParams(params)
+    localStorage.setItem(HIDDEN_PARAMS_KEY, JSON.stringify(params))
+  }
+
+  // 根据隐藏参数计算准确率加成
+  const calculateAccuracyBonus = (): number => {
+    let bonus = 0
+    
+    if (hiddenParams.learningRate === 0.1) bonus += 0.04
+    else if (hiddenParams.learningRate === 0.001) bonus -= 0.05
+    
+    if (hiddenParams.batchSize === 32) bonus += 0.04
+    else if (hiddenParams.batchSize === 8) bonus -= 0.05
+    
+    if (hiddenParams.epochs === 20) bonus += 0.04
+    else if (hiddenParams.epochs === 5) bonus -= 0.05
+    
+    if (hiddenParams.optimizer === 'Adam') bonus += 0.08
+    else if (hiddenParams.optimizer === 'SGD') bonus -= 0.05
+    
+    // 限制最大加成，使最高准确率为95%
+    return Math.min(bonus, 0.20)
+  }
+
   return (
     <div className="tutorial-page" onMouseMove={onMouseMove} onMouseUp={onMouseUp}>
       <div className="bg-blur-layer" style={{ backgroundImage: `url(${levelBg})` }} />
@@ -308,6 +412,11 @@ const TutorialPage: React.FC<TutorialPageProps> = ({ onBack, onNextLevel }) => {
       </div>
 
       <button className="back-button" onClick={onBack}>← 返回</button>
+
+      {/* 隐藏关卡按钮 - 左下角 */}
+      <button className="hidden-level-btn" onClick={() => setShowHiddenLevel(true)} title="隐藏关卡">
+        🔬
+      </button>
 
       {/* 金币显示 */}
       <div className="coins-display">🪙 {coins}</div>
@@ -476,6 +585,17 @@ const TutorialPage: React.FC<TutorialPageProps> = ({ onBack, onNextLevel }) => {
             <button className="info-close" onClick={() => setInfoModal(null)}>关闭</button>
           </div>
         </div>
+      )}
+
+      {/* 隐藏关卡弹窗 */}
+      {showHiddenLevel && (
+        <HiddenLevelModal
+          onClose={() => setShowHiddenLevel(false)}
+          onTrain={handleHiddenTrain}
+          onSave={handleSaveHiddenParams}
+          initialParams={hiddenParams}
+          isConnectionCorrect={isConnectionCorrect}
+        />
       )}
     </div>
   )

@@ -8,6 +8,7 @@ import ProfilePage from './pages/ProfilePage'
 import TutorialPage from './pages/TutorialPage'
 import Level2Page from './pages/Level2Page'
 import Level3Page from './pages/levels/Level3Page'
+import './utils/achievementDebug' // 引入成就调试工具
 
 type Page = 'home' | 'levels' | 'shop' | 'profile' | 'tutorial' | 'level2' | 'level3'
 
