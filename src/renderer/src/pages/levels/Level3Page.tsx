@@ -11,29 +11,19 @@ interface Level3PageProps {
 
 interface Point { x: number; y: number }
 interface Connection { from: string; to: string }
-interface Particle { 
-  id: number
-  color: string
-  path: string[] // 完整路径：['input-out', 'balancer1-in', 'balancer1-out1', 'target1-in']
-  currentSegment: number // 当前在哪个线段
-  progress: number // 当前线段的进度 0-1
-  speed: number
-  waitingAt: string | null // 正在等待的节点ID
-  waitTime: number // 已等待时间
-  done: boolean
-}
-interface BalancerNode {
-  id: string
-  x: number
-  y: number
-}
+interface Particle { id: number; color: string; from: string; to: string; progress: number; speed: number; done: boolean }
 
 const SAVE_KEY = 'level3_saved_state'
 const COINS_KEY = 'player_coins'
 const LEVEL3_REWARD_KEY = 'level3_reward_claimed'
-const MAX_NODES = 3
-const MAX_BALANCERS = 3
-const BALANCER_DELAY = 0.01 // 均衡器时延：0.01秒
+
+// 均衡器位置 - 调整到更低的位置避免遮挡按钮
+interface BalancerPos { x: number; y: number }
+const initialBalancerPositions: Record<string, BalancerPos> = {
+  'balancer1': { x: 0, y: 20 },
+  'balancer2': { x: 0, y: 180 },
+  'balancer3': { x: 0, y: 340 }
+}
 
 const Level3Page: React.FC<Level3PageProps> = ({ onBack }) => {
   const particles = React.useMemo(() => {
@@ -49,33 +39,37 @@ const Level3Page: React.FC<Level3PageProps> = ({ onBack }) => {
     }))
   }, [])
 
-  const [balancerNodes, setBalancerNodes] = useState<BalancerNode[]>([])
-  const [connections, setConnections] = useState<Connection[]>([])
+  const savedState = React.useMemo(() => {
+    try { 
+      const saved = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null')
+      return saved || { connections: [], balancerPositions: initialBalancerPositions }
+    } catch { 
+      return { connections: [], balancerPositions: initialBalancerPositions }
+    }
+  }, [])
+
+  const [balancerPositions, setBalancerPositions] = useState<Record<string, BalancerPos>>(
+    savedState.balancerPositions || initialBalancerPositions
+  )
+  const [connections, setConnections] = useState<Connection[]>(savedState.connections || [])
   const [draggingLine, setDraggingLine] = useState<{ fromId: string; mouse: Point } | null>(null)
-  const [draggingNode, setDraggingNode] = useState<{ nodeId: string; offset: Point } | null>(null)
-  const [draggingFromLibrary, setDraggingFromLibrary] = useState<{ type: 'balancer'; offset: Point; startX: number; startY: number } | null>(null)
+  const [draggingBalancer, setDraggingBalancer] = useState<string | null>(null)
+  const [dragOffset, setDragOffset] = useState<Point>({ x: 0, y: 0 })
   const [saved, setSaved] = useState(false)
   const [testing, setTesting] = useState(false)
   const [testParticles, setTestParticles] = useState<Particle[]>([])
   const [speedMultiplier, setSpeedMultiplier] = useState(1.0)
-  const [target1Count, setTarget1Count] = useState(0)
-  const [target2Count, setTarget2Count] = useState(0)
-  const [target3Count, setTarget3Count] = useState(0)
-  const [target4Count, setTarget4Count] = useState(0)
-  const [target1Accuracy, setTarget1Accuracy] = useState(0)
-  const [target2Accuracy, setTarget2Accuracy] = useState(0)
-  const [target3Accuracy, setTarget3Accuracy] = useState(0)
-  const [target4Accuracy, setTarget4Accuracy] = useState(0)
+  const [target1Progress, setTarget1Progress] = useState(0)
+  const [target2Progress, setTarget2Progress] = useState(0)
+  const [target3Progress, setTarget3Progress] = useState(0)
+  const [target4Progress, setTarget4Progress] = useState(0)
   const [elapsed, setElapsed] = useState(0)
-  const [levelComplete, setLevelComplete] = useState(false)
   const [coins, setCoins] = useState(() => parseInt(localStorage.getItem(COINS_KEY) || '0'))
   const [showReward, setShowReward] = useState(false)
-  const [infoModal, setInfoModal] = useState<'input' | 'output' | 'balancer' | null>(null)
   const rewardClaimed = React.useRef(!!localStorage.getItem(LEVEL3_REWARD_KEY))
   const speedMultiplierRef = useRef(1.0)
   const animFrameRef = useRef<number | null>(null)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const nextBalancerId = useRef(1)
   const [, forceUpdate] = useState(0)
 
   useEffect(() => {
@@ -92,30 +86,12 @@ const Level3Page: React.FC<Level3PageProps> = ({ onBack }) => {
     return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
   }, [])
 
-  // 从节点库开始拖拽
-  const onLibraryNodeMouseDown = (e: React.MouseEvent, type: 'balancer') => {
-    if (balancerNodes.length >= MAX_BALANCERS) return
-    if (balancerNodes.length >= MAX_NODES) return
-    
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-    setDraggingFromLibrary({
-      type,
-      offset: { x: e.clientX - rect.left, y: e.clientY - rect.top },
-      startX: e.clientX,
-      startY: e.clientY
-    })
-    e.preventDefault()
-    e.stopPropagation()
-  }
-
-  // 拖拽已存在的节点
-  const onNodeMouseDown = (e: React.MouseEvent, nodeId: string) => {
-    const node = balancerNodes.find(n => n.id === nodeId)
-    if (!node) return
-    
-    setDraggingNode({
-      nodeId,
-      offset: { x: e.clientX - node.x, y: e.clientY - node.y }
+  const onBalancerMouseDown = (e: React.MouseEvent, balancerId: string) => {
+    setDraggingBalancer(balancerId)
+    const pos = balancerPositions[balancerId]
+    setDragOffset({
+      x: e.clientX - pos.x,
+      y: e.clientY - pos.y
     })
     e.preventDefault()
   }
@@ -124,11 +100,6 @@ const Level3Page: React.FC<Level3PageProps> = ({ onBack }) => {
     e.stopPropagation()
     const center = getDotCenter(id)
     if (!center) return
-    
-    // 检查该连接点是否已经发出连线
-    const existingConnection = connections.find(c => c.from === id)
-    if (existingConnection) return
-    
     setDraggingLine({ fromId: id, mouse: center })
     e.preventDefault()
   }
@@ -139,252 +110,179 @@ const Level3Page: React.FC<Level3PageProps> = ({ onBack }) => {
     const from = draggingLine.fromId
     if (from === id) { setDraggingLine(null); return }
     
-    // 检查from是否已经有连接（每个连接点只能发出一条线）
-    const existingFromConnection = connections.find(c => c.from === from)
-    if (existingFromConnection) {
-      setDraggingLine(null)
-      return
+    // 连接规则：
+    // input-out -> balancer1-in
+    // balancer1-out1/out2 -> balancer2-in, balancer3-in
+    // balancer2-out1/out2 -> target1-in, target2-in, target3-in, target4-in
+    // balancer3-out1/out2 -> target1-in, target2-in, target3-in, target4-in
+    const rules: Record<string, string[]> = {
+      'input-out': ['balancer1-in'],
+      'balancer1-out1': ['balancer2-in', 'balancer3-in'],
+      'balancer1-out2': ['balancer2-in', 'balancer3-in'],
+      'balancer2-out1': ['target1-in', 'target2-in', 'target3-in', 'target4-in'],
+      'balancer2-out2': ['target1-in', 'target2-in', 'target3-in', 'target4-in'],
+      'balancer3-out1': ['target1-in', 'target2-in', 'target3-in', 'target4-in'],
+      'balancer3-out2': ['target1-in', 'target2-in', 'target3-in', 'target4-in'],
     }
-    
-    setConnections(prev => [...prev, { from, to: id }])
+    const allowed = rules[from]
+    if (!allowed || !allowed.includes(id)) { setDraggingLine(null); return }
+    setConnections(prev => [...prev.filter(c => c.from !== from && c.to !== id), { from, to: id }])
     setDraggingLine(null)
   }
 
   const onMouseMove = (e: React.MouseEvent) => {
-    if (draggingFromLibrary) {
-      // 更新拖拽预览位置
-      setDraggingFromLibrary(prev => prev ? { ...prev, startX: e.clientX, startY: e.clientY } : null)
-    } else if (draggingNode) {
-      const newX = e.clientX - draggingNode.offset.x
-      const newY = e.clientY - draggingNode.offset.y
-      setBalancerNodes(prev => prev.map(node =>
-        node.id === draggingNode.nodeId ? { ...node, x: newX, y: newY } : node
-      ))
-    } else if (draggingLine) {
-      setDraggingLine(prev => prev ? { ...prev, mouse: { x: e.clientX, y: e.clientY } } : null)
+    if (draggingBalancer) {
+      const x = e.clientX - dragOffset.x
+      const y = e.clientY - dragOffset.y
+      setBalancerPositions(prev => ({
+        ...prev,
+        [draggingBalancer]: { x, y }
+      }))
     }
+    if (draggingLine)
+      setDraggingLine(prev => prev ? { ...prev, mouse: { x: e.clientX, y: e.clientY } } : null)
   }
 
-  const onMouseUp = (e: React.MouseEvent) => {
-    if (draggingFromLibrary) {
-      // 在画布上创建新节点
-      const x = e.clientX - draggingFromLibrary.offset.x
-      const y = e.clientY - draggingFromLibrary.offset.y
-      
-      // 检查是否在有效区域（不在右侧边栏）
-      if (x < window.innerWidth - 300 && x > 160) {
-        const newNode: BalancerNode = {
-          id: `balancer${nextBalancerId.current++}`,
-          x,
-          y
-        }
-        setBalancerNodes(prev => [...prev, newNode])
-      }
-      setDraggingFromLibrary(null)
-    } else {
-      setDraggingNode(null)
-      setDraggingLine(null)
-    }
+  const onMouseUp = () => { 
+    setDraggingBalancer(null)
+    setDraggingLine(null) 
   }
 
   const handleSave = () => {
-    localStorage.setItem(SAVE_KEY, JSON.stringify({ connections, balancerNodes }))
+    localStorage.setItem(SAVE_KEY, JSON.stringify({ connections, balancerPositions }))
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
   }
 
   const handleClearLines = () => setConnections([])
 
+  // 启动测试
   const handleTest = () => {
     if (testing) return
     setTesting(true)
-    setTarget1Count(0)
-    setTarget2Count(0)
-    setTarget3Count(0)
-    setTarget4Count(0)
-    setTarget1Accuracy(0)
-    setTarget2Accuracy(0)
-    setTarget3Accuracy(0)
-    setTarget4Accuracy(0)
+    setTarget1Progress(0)
+    setTarget2Progress(0)
+    setTarget3Progress(0)
+    setTarget4Progress(0)
     setElapsed(0)
-    setLevelComplete(false)
 
     timerRef.current = setInterval(() => setElapsed(e => e + 1), 1000)
 
-    // 构建完整路径：包括节点的输入和输出
-    // 路径格式：['input-out', 'balancer1-in', 'balancer1-out1', 'target1-in']
-    const buildFullPaths = (start: string): string[][] => {
-      const allPaths: string[][] = []
-      
-      const explore = (currentOut: string, path: string[]) => {
-        // 查找从当前输出点连接到哪里
-        const conn = connections.find(c => c.from === currentOut)
-        if (!conn) return
-        
-        const targetIn = conn.to
-        const newPath = [...path, targetIn]
-        
-        // 如果到达最终输出
-        if (targetIn.startsWith('target') && targetIn.endsWith('-in')) {
-          allPaths.push(newPath)
-          return
-        }
-        
-        // 如果到达节点输入端，需要找到该节点的所有输出端
-        if (targetIn.endsWith('-in')) {
-          const nodeId = targetIn.replace('-in', '')
-          // 查找该节点的所有输出
-          const outputs = connections.filter(c => c.from.startsWith(nodeId + '-out'))
-          outputs.forEach(outConn => {
-            explore(outConn.from, [...newPath, outConn.from])
-          })
-        }
-      }
-      
-      explore(start, [start])
-      return allPaths
-    }
-
-    const allPaths = buildFullPaths('input-out')
-    
-    if (allPaths.length === 0) {
-      setTesting(false)
-      if (timerRef.current) clearInterval(timerRef.current)
-      return
-    }
-
-    // 创建50个红色方块
+    let id = 0
     const particles: Particle[] = []
-    const colors = Array(50).fill('#ef4444')
-    
-    colors.forEach((color, i) => {
-      const path = allPaths[Math.floor(Math.random() * allPaths.length)]
-      particles.push({
-        id: i,
-        color,
-        path,
-        currentSegment: 0,
-        progress: -(i * 0.05),
-        speed: 0.01,
-        waitingAt: null,
-        waitTime: 0,
-        done: false
+
+    // 从输入到balancer1（50个红色方块）
+    const inputConn = connections.find(c => c.from === 'input-out')
+    if (inputConn) {
+      const inputColors = Array(50).fill('#ef4444')
+      inputColors.forEach((color, i) => {
+        particles.push({ id: id++, color, from: inputConn.from, to: inputConn.to, progress: -(i * 0.08), speed: 0.003, done: false })
       })
-    })
+    }
+
+    // balancer1 的两个输出（各25个，平均分配）
+    const b1out1 = connections.find(c => c.from === 'balancer1-out1')
+    const b1out2 = connections.find(c => c.from === 'balancer1-out2')
+    const delay1 = -0.5
+    if (b1out1) {
+      const colors = Array(25).fill('#ef4444')
+      colors.forEach((color, i) => {
+        particles.push({ id: id++, color, from: b1out1.from, to: b1out1.to, progress: delay1 - i * 0.12, speed: 0.003, done: false })
+      })
+    }
+    if (b1out2) {
+      const colors = Array(25).fill('#ef4444')
+      colors.forEach((color, i) => {
+        particles.push({ id: id++, color, from: b1out2.from, to: b1out2.to, progress: delay1 - i * 0.12, speed: 0.003, done: false })
+      })
+    }
+
+    // balancer2 和 balancer3 的输出（各12-13个，再平均分配）
+    const b2out1 = connections.find(c => c.from === 'balancer2-out1')
+    const b2out2 = connections.find(c => c.from === 'balancer2-out2')
+    const b3out1 = connections.find(c => c.from === 'balancer3-out1')
+    const b3out2 = connections.find(c => c.from === 'balancer3-out2')
+    const delay2 = -1.0
+
+    if (b2out1) {
+      const colors = Array(13).fill('#ef4444')
+      colors.forEach((color, i) => {
+        particles.push({ id: id++, color, from: b2out1.from, to: b2out1.to, progress: delay2 - i * 0.15, speed: 0.003, done: false })
+      })
+    }
+    if (b2out2) {
+      const colors = Array(12).fill('#ef4444')
+      colors.forEach((color, i) => {
+        particles.push({ id: id++, color, from: b2out2.from, to: b2out2.to, progress: delay2 - i * 0.15, speed: 0.003, done: false })
+      })
+    }
+    if (b3out1) {
+      const colors = Array(13).fill('#ef4444')
+      colors.forEach((color, i) => {
+        particles.push({ id: id++, color, from: b3out1.from, to: b3out1.to, progress: delay2 - i * 0.15, speed: 0.003, done: false })
+      })
+    }
+    if (b3out2) {
+      const colors = Array(12).fill('#ef4444')
+      colors.forEach((color, i) => {
+        particles.push({ id: id++, color, from: b3out2.from, to: b3out2.to, progress: delay2 - i * 0.15, speed: 0.003, done: false })
+      })
+    }
 
     setTestParticles(particles)
 
     const animate = () => {
       setTestParticles(prev => {
         const next = prev.map(p => {
-          if (p.done) return p
-          
-          // 如果正在节点内等待
-          if (p.waitingAt) {
-            const newWaitTime = p.waitTime + 0.016 * speedMultiplierRef.current
-            if (newWaitTime >= BALANCER_DELAY) {
-              // 等待结束，从节点输出端出来
-              // currentSegment指向节点的-in，下一个应该是节点的-out
-              return {
-                ...p,
-                waitingAt: null,
-                waitTime: 0,
-                currentSegment: p.currentSegment + 1,
-                progress: 0
-              }
-            }
-            return { ...p, waitTime: newWaitTime }
-          }
-          
-          // 还没开始
-          if (p.progress < 0) {
-            return { ...p, progress: p.progress + p.speed * speedMultiplierRef.current }
-          }
-          
-          // 正常移动
           const newProgress = p.progress + p.speed * speedMultiplierRef.current
-          
-          if (newProgress >= 1) {
-            // 到达当前线段终点
-            const currentTo = p.path[p.currentSegment + 1]
-            
-            if (!currentTo) {
-              return { ...p, done: true, progress: 1 }
-            }
-            
-            // 检查到达的节点类型
-            if (currentTo.includes('balancer') && currentTo.endsWith('-in')) {
-              // 到达均衡器输入端，开始等待
-              return {
-                ...p,
-                progress: 1,
-                waitingAt: currentTo,
-                waitTime: 0,
-                currentSegment: p.currentSegment + 1
-              }
-            } else if (currentTo.startsWith('target') && currentTo.endsWith('-in')) {
-              // 到达输出流
-              return { ...p, done: true, progress: 1, currentSegment: p.currentSegment + 1 }
-            } else {
-              // 其他情况（如节点输出端），直接进入下一段
-              return {
-                ...p,
-                currentSegment: p.currentSegment + 1,
-                progress: 0
-              }
-            }
-          }
-          
-          return { ...p, progress: newProgress }
+          return { ...p, progress: newProgress, done: newProgress >= 1 }
         })
 
-        // 统计到达各个目标的方块
-        const target1Done = next.filter(p => {
-          if (!p.done) return false
-          const lastNode = p.path[p.currentSegment]
-          return lastNode === 'target1-in'
-        })
-        const target2Done = next.filter(p => {
-          if (!p.done) return false
-          const lastNode = p.path[p.currentSegment]
-          return lastNode === 'target2-in'
-        })
-        const target3Done = next.filter(p => {
-          if (!p.done) return false
-          const lastNode = p.path[p.currentSegment]
-          return lastNode === 'target3-in'
-        })
-        const target4Done = next.filter(p => {
-          if (!p.done) return false
-          const lastNode = p.path[p.currentSegment]
-          return lastNode === 'target4-in'
-        })
+        // 计算到达每个目标的红色方块数量
+        const target1Red = next.filter(p => p.to === 'target1-in' && p.color === '#ef4444' && p.progress >= 0)
+          .reduce((sum, p) => sum + Math.min(p.progress, 1), 0)
+        const target2Red = next.filter(p => p.to === 'target2-in' && p.color === '#ef4444' && p.progress >= 0)
+          .reduce((sum, p) => sum + Math.min(p.progress, 1), 0)
+        const target3Red = next.filter(p => p.to === 'target3-in' && p.color === '#ef4444' && p.progress >= 0)
+          .reduce((sum, p) => sum + Math.min(p.progress, 1), 0)
+        const target4Red = next.filter(p => p.to === 'target4-in' && p.color === '#ef4444' && p.progress >= 0)
+          .reduce((sum, p) => sum + Math.min(p.progress, 1), 0)
 
-        setTarget1Count(target1Done.length)
-        setTarget2Count(target2Done.length)
-        setTarget3Count(target3Done.length)
-        setTarget4Count(target4Done.length)
+        setTarget1Progress(Math.min(target1Red / 12.5, 1))
+        setTarget2Progress(Math.min(target2Red / 12.5, 1))
+        setTarget3Progress(Math.min(target3Red / 12.5, 1))
+        setTarget4Progress(Math.min(target4Red / 12.5, 1))
 
-        setTarget1Accuracy(target1Done.length > 0 ? target1Done.filter(p => p.color === '#ef4444').length / target1Done.length : 0)
-        setTarget2Accuracy(target2Done.length > 0 ? target2Done.filter(p => p.color === '#ef4444').length / target2Done.length : 0)
-        setTarget3Accuracy(target3Done.length > 0 ? target3Done.filter(p => p.color === '#ef4444').length / target3Done.length : 0)
-        setTarget4Accuracy(target4Done.length > 0 ? target4Done.filter(p => p.color === '#ef4444').length / target4Done.length : 0)
-
-        // 检查是否过关
-        const target1Complete = target1Done.length >= 8 && target1Done.filter(p => p.color === '#ef4444').length === target1Done.length
-        const target2Complete = target2Done.length >= 8 && target2Done.filter(p => p.color === '#ef4444').length === target2Done.length
-        const target3Complete = target3Done.length >= 8 && target3Done.filter(p => p.color === '#ef4444').length === target3Done.length
-        const target4Complete = target4Done.length >= 8 && target4Done.filter(p => p.color === '#ef4444').length === target4Done.length
-
-        if (target1Complete && target2Complete && target3Complete && target4Complete) {
+        if (next.every(p => p.done)) {
           setTesting(false)
-          setLevelComplete(true)
           if (timerRef.current) clearInterval(timerRef.current)
           
-          if (!rewardClaimed.current) {
+          // 计算最终准确率（目标是让四个输出各12-13个，理想是12.5个）
+          const finalTarget1 = next.filter(p => p.to === 'target1-in' && p.color === '#ef4444').length
+          const finalTarget2 = next.filter(p => p.to === 'target2-in' && p.color === '#ef4444').length
+          const finalTarget3 = next.filter(p => p.to === 'target3-in' && p.color === '#ef4444').length
+          const finalTarget4 = next.filter(p => p.to === 'target4-in' && p.color === '#ef4444').length
+          
+          // 计算偏差：理想情况是各12.5个
+          const target1Deviation = Math.abs(finalTarget1 - 12.5)
+          const target2Deviation = Math.abs(finalTarget2 - 12.5)
+          const target3Deviation = Math.abs(finalTarget3 - 12.5)
+          const target4Deviation = Math.abs(finalTarget4 - 12.5)
+          const totalDeviation = target1Deviation + target2Deviation + target3Deviation + target4Deviation
+          
+          // 准确率：偏差越小越好，最大偏差是50（全部到一边）
+          const accuracy = 1 - (totalDeviation / 50)
+          
+          setTarget1Progress(finalTarget1 / 12.5)
+          setTarget2Progress(finalTarget2 / 12.5)
+          setTarget3Progress(finalTarget3 / 12.5)
+          setTarget4Progress(finalTarget4 / 12.5)
+          
+          // 如果准确率达到80%以上（偏差小于10），发放奖励
+          if (accuracy >= 0.8 && !rewardClaimed.current) {
             rewardClaimed.current = true
             localStorage.setItem(LEVEL3_REWARD_KEY, '1')
-            const reward = 200
+            const reward = Math.floor(accuracy * 200)
             const newCoins = parseInt(localStorage.getItem(COINS_KEY) || '0') + reward
             localStorage.setItem(COINS_KEY, String(newCoins))
             setCoins(newCoins)
@@ -393,13 +291,6 @@ const Level3Page: React.FC<Level3PageProps> = ({ onBack }) => {
           }
           return []
         }
-
-        if (next.every(p => p.done)) {
-          setTesting(false)
-          if (timerRef.current) clearInterval(timerRef.current)
-          return []
-        }
-
         animFrameRef.current = requestAnimationFrame(animate)
         return next
       })
@@ -435,18 +326,9 @@ const Level3Page: React.FC<Level3PageProps> = ({ onBack }) => {
 
   const renderTestParticles = () => testParticles.map(p => {
     if (p.progress < 0 || p.done) return null
-    if (p.waitingAt) return null // 等待中不显示
-    
-    // 获取当前线段的起点和终点
-    const fromId = p.path[p.currentSegment]
-    const toId = p.path[p.currentSegment + 1]
-    
-    if (!fromId || !toId) return null
-    
-    const from = getDotCenter(fromId)
-    const to = getDotCenter(toId)
+    const from = getDotCenter(p.from)
+    const to = getDotCenter(p.to)
     if (!from || !to) return null
-    
     const t = Math.min(p.progress, 1)
     const x = from.x + (to.x - from.x) * t - 4
     const y = from.y + (to.y - from.y) * t - 4
@@ -483,9 +365,6 @@ const Level3Page: React.FC<Level3PageProps> = ({ onBack }) => {
 
       <button className="back-button" onClick={onBack}>← 返回</button>
 
-      {/* 节点计数器 */}
-      <div className="node-counter">{balancerNodes.length}/{MAX_NODES}</div>
-
       {/* 金币显示 */}
       <div className="coins-display">🪙 {coins}</div>
 
@@ -494,63 +373,7 @@ const Level3Page: React.FC<Level3PageProps> = ({ onBack }) => {
         <div className="reward-popup">
           <div className="reward-icon">🎉</div>
           <div className="reward-text">关卡完成！</div>
-          <div className="reward-coins">+200 🪙</div>
-        </div>
-      )}
-
-      {/* 过关成功页面 */}
-      {levelComplete && (
-        <div className="success-overlay">
-          <div className="success-modal">
-            <div className="success-icon">🎉</div>
-            <h2 className="success-title">恭喜过关！</h2>
-            <div className="success-stats">
-              <div className="stat-item">
-                <span className="stat-label">用时</span>
-                <span className="stat-value">{Math.floor(elapsed / 60)}:{(elapsed % 60).toString().padStart(2, '0')}</span>
-              </div>
-              <div className="stat-item">
-                <span className="stat-label">奖励</span>
-                <span className="stat-value">+200 🪙</span>
-              </div>
-            </div>
-            <button className="success-btn" onClick={onBack}>返回关卡</button>
-          </div>
-        </div>
-      )}
-
-      {/* 说明弹窗 */}
-      {infoModal && (
-        <div className="info-overlay" onClick={() => setInfoModal(null)}>
-          <div className="info-modal" onClick={e => e.stopPropagation()}>
-            <h3 className="info-title">
-              {infoModal === 'input' ? '📊 输入数据' : infoModal === 'output' ? '🎯 输出目标' : '⚖️ 均衡器'}
-            </h3>
-            <div className="info-columns">
-              <div className="info-col">
-                <div className="info-col-label simple">简易版</div>
-                <p className="info-desc">
-                  {infoModal === 'input'
-                    ? '这就像给AI看很多例子。你给它看很多张图片，告诉它哪些有目标、哪些没有，它就慢慢学会自己判断。'
-                    : infoModal === 'output'
-                    ? '输出目标就像是分类的结果箱。每个箱子需要收集8个正确的红色方块，准确率要达到100%才算过关。'
-                    : '均衡器就像一个"平分器"。它把进来的数据平均分成两份，从两个出口送出去。就像把一堆苹果平均分给两个人。'}
-                </p>
-              </div>
-              <div className="info-divider" />
-              <div className="info-col">
-                <div className="info-col-label pro">专业版</div>
-                <p className="info-desc">
-                  {infoModal === 'input'
-                    ? '训练数据集（Training Dataset）是监督学习的基础。每个样本包含特征向量和标签，模型通过最小化损失函数在数据分布上学习特征映射关系。数据质量和数量直接影响模型的泛化能力。'
-                    : infoModal === 'output'
-                    ? '输出节点是数据流的终点，用于收集和验证分类结果。本关要求每个输出达到指定数量（8个样本）且准确率为100%，以验证数据流的均衡分配是否正确。'
-                    : '均衡器（Load Balancer）是一种数据分配节点，实现1:1的流量分配策略。它将输入流按顺序或随机方式均匀分配到两个输出通道，确保负载均衡，常用于并行处理和分布式系统中。'}
-                </p>
-              </div>
-            </div>
-            <button className="info-close" onClick={() => setInfoModal(null)}>关闭</button>
-          </div>
+          <div className="reward-coins">+{Math.floor((1 - (Math.abs(next.filter(p => p.to === 'target1-in').length - 12.5) + Math.abs(next.filter(p => p.to === 'target2-in').length - 12.5) + Math.abs(next.filter(p => p.to === 'target3-in').length - 12.5) + Math.abs(next.filter(p => p.to === 'target4-in').length - 12.5)) / 50) * 200)} 🪙</div>
         </div>
       )}
 
@@ -572,10 +395,7 @@ const Level3Page: React.FC<Level3PageProps> = ({ onBack }) => {
       {/* 左边 - 输入图 */}
       <div className="left-panel">
         <div className="img-with-dot">
-          <div style={{ position: 'relative', display: 'inline-block' }}>
-            <img src={level3Input} alt="输入数据" className="input-img" draggable={false} />
-            <button className="info-btn" onClick={() => setInfoModal('input')}>i</button>
-          </div>
+          <img src={level3Input} alt="输入数据" className="input-img" draggable={false} />
           <div ref={setDotRef('input-out')} className="dot dot-right"
             onMouseDown={(e) => onDotMouseDown(e, 'input-out')}
             onMouseUp={(e) => onDotMouseUp(e, 'input-out')} />
@@ -590,27 +410,15 @@ const Level3Page: React.FC<Level3PageProps> = ({ onBack }) => {
             onMouseUp={(e) => onDotMouseUp(e, 'target1-in')} />
           <div className="img-bar-wrapper">
             <img src={targetImg} alt="目标1" className="target-img-small" draggable={false} />
-            <button className="info-btn" onClick={() => setInfoModal('output')}>i</button>
-            <div className="target-bars">
-              <div className="target-bar-item">
-                <span className="bar-label-small">数量</span>
-                <div className="bar-track-small">
-                  <div className="bar-fill-small bar-green" style={{ height: `${(target1Count / 8) * 100}%` }} />
+            {(testing || target1Progress > 0) && (
+              <div className="bar-overlay">
+                <span className="bar-label">{Math.round(target1Progress * 100)}%</span>
+                <div className="bar-track">
+                  <div className="bar-threshold" style={{ bottom: '100%' }} />
+                  <div className="bar-fill bar-red" style={{ height: `${target1Progress * 100}%` }} />
                 </div>
-                <span className="bar-value-small" style={{ color: target1Count >= 8 ? '#4ade80' : '#ffffff' }}>
-                  {target1Count}/8
-                </span>
               </div>
-              <div className="target-bar-item">
-                <span className="bar-label-small">准确率</span>
-                <div className="bar-track-small">
-                  <div className="bar-fill-small bar-blue" style={{ height: `${target1Accuracy * 100}%` }} />
-                </div>
-                <span className="bar-value-small" style={{ color: target1Accuracy >= 1 ? '#4ade80' : '#ffffff' }}>
-                  {Math.round(target1Accuracy * 100)}%
-                </span>
-              </div>
-            </div>
+            )}
           </div>
         </div>
         <div className="img-with-dot">
@@ -619,26 +427,15 @@ const Level3Page: React.FC<Level3PageProps> = ({ onBack }) => {
             onMouseUp={(e) => onDotMouseUp(e, 'target2-in')} />
           <div className="img-bar-wrapper">
             <img src={targetImg} alt="目标2" className="target-img-small" draggable={false} />
-            <div className="target-bars">
-              <div className="target-bar-item">
-                <span className="bar-label-small">数量</span>
-                <div className="bar-track-small">
-                  <div className="bar-fill-small bar-green" style={{ height: `${(target2Count / 8) * 100}%` }} />
+            {(testing || target2Progress > 0) && (
+              <div className="bar-overlay">
+                <span className="bar-label">{Math.round(target2Progress * 100)}%</span>
+                <div className="bar-track">
+                  <div className="bar-threshold" style={{ bottom: '100%' }} />
+                  <div className="bar-fill bar-red" style={{ height: `${target2Progress * 100}%` }} />
                 </div>
-                <span className="bar-value-small" style={{ color: target2Count >= 8 ? '#4ade80' : '#ffffff' }}>
-                  {target2Count}/8
-                </span>
               </div>
-              <div className="target-bar-item">
-                <span className="bar-label-small">准确率</span>
-                <div className="bar-track-small">
-                  <div className="bar-fill-small bar-blue" style={{ height: `${target2Accuracy * 100}%` }} />
-                </div>
-                <span className="bar-value-small" style={{ color: target2Accuracy >= 1 ? '#4ade80' : '#ffffff' }}>
-                  {Math.round(target2Accuracy * 100)}%
-                </span>
-              </div>
-            </div>
+            )}
           </div>
         </div>
         <div className="img-with-dot">
@@ -647,26 +444,15 @@ const Level3Page: React.FC<Level3PageProps> = ({ onBack }) => {
             onMouseUp={(e) => onDotMouseUp(e, 'target3-in')} />
           <div className="img-bar-wrapper">
             <img src={targetImg} alt="目标3" className="target-img-small" draggable={false} />
-            <div className="target-bars">
-              <div className="target-bar-item">
-                <span className="bar-label-small">数量</span>
-                <div className="bar-track-small">
-                  <div className="bar-fill-small bar-green" style={{ height: `${(target3Count / 8) * 100}%` }} />
+            {(testing || target3Progress > 0) && (
+              <div className="bar-overlay">
+                <span className="bar-label">{Math.round(target3Progress * 100)}%</span>
+                <div className="bar-track">
+                  <div className="bar-threshold" style={{ bottom: '100%' }} />
+                  <div className="bar-fill bar-red" style={{ height: `${target3Progress * 100}%` }} />
                 </div>
-                <span className="bar-value-small" style={{ color: target3Count >= 8 ? '#4ade80' : '#ffffff' }}>
-                  {target3Count}/8
-                </span>
               </div>
-              <div className="target-bar-item">
-                <span className="bar-label-small">准确率</span>
-                <div className="bar-track-small">
-                  <div className="bar-fill-small bar-blue" style={{ height: `${target3Accuracy * 100}%` }} />
-                </div>
-                <span className="bar-value-small" style={{ color: target3Accuracy >= 1 ? '#4ade80' : '#ffffff' }}>
-                  {Math.round(target3Accuracy * 100)}%
-                </span>
-              </div>
-            </div>
+            )}
           </div>
         </div>
         <div className="img-with-dot">
@@ -675,72 +461,20 @@ const Level3Page: React.FC<Level3PageProps> = ({ onBack }) => {
             onMouseUp={(e) => onDotMouseUp(e, 'target4-in')} />
           <div className="img-bar-wrapper">
             <img src={targetImg} alt="目标4" className="target-img-small" draggable={false} />
-            <div className="target-bars">
-              <div className="target-bar-item">
-                <span className="bar-label-small">数量</span>
-                <div className="bar-track-small">
-                  <div className="bar-fill-small bar-green" style={{ height: `${(target4Count / 8) * 100}%` }} />
+            {(testing || target4Progress > 0) && (
+              <div className="bar-overlay">
+                <span className="bar-label">{Math.round(target4Progress * 100)}%</span>
+                <div className="bar-track">
+                  <div className="bar-threshold" style={{ bottom: '100%' }} />
+                  <div className="bar-fill bar-red" style={{ height: `${target4Progress * 100}%` }} />
                 </div>
-                <span className="bar-value-small" style={{ color: target4Count >= 8 ? '#4ade80' : '#ffffff' }}>
-                  {target4Count}/8
-                </span>
               </div>
-              <div className="target-bar-item">
-                <span className="bar-label-small">准确率</span>
-                <div className="bar-track-small">
-                  <div className="bar-fill-small bar-blue" style={{ height: `${target4Accuracy * 100}%` }} />
-                </div>
-                <span className="bar-value-small" style={{ color: target4Accuracy >= 1 ? '#4ade80' : '#ffffff' }}>
-                  {Math.round(target4Accuracy * 100)}%
-                </span>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* 画布上的均衡器节点 */}
-      {balancerNodes.map(node => (
-        <div
-          key={node.id}
-          className="canvas-balancer"
-          style={{ left: node.x, top: node.y }}
-          onMouseDown={(e) => onNodeMouseDown(e, node.id)}
-        >
-          <div ref={setDotRef(`${node.id}-in`)} className="dot dot-left"
-            onMouseDown={(e) => onDotMouseDown(e, `${node.id}-in`)}
-            onMouseUp={(e) => onDotMouseUp(e, `${node.id}-in`)} />
-          <div style={{ position: 'relative', width: '180px' }}>
-            <img src={level3Balancer} alt="均衡器" className="balancer-img" draggable={false} style={{ width: '100%', display: 'block' }} />
-            <button className="info-btn" onClick={(e) => { e.stopPropagation(); setInfoModal('balancer') }}>i</button>
-            <div ref={setDotRef(`${node.id}-out1`)} className="dot"
-              style={{ position: 'absolute', right: 10, top: '35%', transform: 'translateY(-50%)' }}
-              onMouseDown={(e) => onDotMouseDown(e, `${node.id}-out1`)}
-              onMouseUp={(e) => onDotMouseUp(e, `${node.id}-out1`)} />
-            <div ref={setDotRef(`${node.id}-out2`)} className="dot"
-              style={{ position: 'absolute', right: 10, bottom: 10, transform: 'none' }}
-              onMouseDown={(e) => onDotMouseDown(e, `${node.id}-out2`)}
-              onMouseUp={(e) => onDotMouseUp(e, `${node.id}-out2`)} />
-          </div>
-        </div>
-      ))}
-
-      {/* 正在拖拽的节点预览 */}
-      {draggingFromLibrary && (
-        <div
-          className="canvas-balancer dragging-preview"
-          style={{
-            left: draggingFromLibrary.startX - draggingFromLibrary.offset.x,
-            top: draggingFromLibrary.startY - draggingFromLibrary.offset.y,
-            opacity: 0.7,
-            pointerEvents: 'none'
-          }}
-        >
-          <img src={level3Balancer} alt="均衡器" className="balancer-img" draggable={false} style={{ width: '180px' }} />
-        </div>
-      )}
-
-      {/* 右边栏 - 节点库 */}
+      {/* 右边栏 */}
       <div className="sidebar">
         <div className="sidebar-actions">
           <button className={`sidebar-btn test-btn ${testing ? 'testing' : ''}`} onClick={handleTest} disabled={testing}>
@@ -751,15 +485,75 @@ const Level3Page: React.FC<Level3PageProps> = ({ onBack }) => {
           </button>
         </div>
         <div className="sidebar-content">
-          <div className="node-library">
-            <div className="node-library-title">节点库</div>
-            {/* 均衡器节点 */}
-            <div 
-              className="library-node"
-              onMouseDown={(e) => onLibraryNodeMouseDown(e, 'balancer')}
-            >
-              <img src={level3Balancer} alt="均衡器" className="library-node-img" draggable={false} />
-              <span className="library-node-label">均衡器 ({balancerNodes.length}/{MAX_BALANCERS})</span>
+          {/* 均衡器1 */}
+          <div 
+            className="balancer-wrapper"
+            style={{ 
+              transform: `translate(${balancerPositions.balancer1.x}px, ${balancerPositions.balancer1.y}px)`,
+              cursor: draggingBalancer === 'balancer1' ? 'grabbing' : 'grab'
+            }}
+            onMouseDown={(e) => onBalancerMouseDown(e, 'balancer1')}>
+            <div ref={setDotRef('balancer1-in')} className="dot dot-left"
+              onMouseDown={(e) => onDotMouseDown(e, 'balancer1-in')}
+              onMouseUp={(e) => onDotMouseUp(e, 'balancer1-in')} />
+            <div style={{ position: 'relative', width: '180px', flexShrink: 0 }}>
+              <img src={level3Balancer} alt="均衡器" className="balancer-img" draggable={false} style={{ width: '100%', display: 'block' }} />
+              <div ref={setDotRef('balancer1-out1')} className="dot"
+                style={{ position: 'absolute', right: 10, top: '35%', transform: 'translateY(-50%)' }}
+                onMouseDown={(e) => onDotMouseDown(e, 'balancer1-out1')}
+                onMouseUp={(e) => onDotMouseUp(e, 'balancer1-out1')} />
+              <div ref={setDotRef('balancer1-out2')} className="dot"
+                style={{ position: 'absolute', right: 10, bottom: 10, transform: 'none' }}
+                onMouseDown={(e) => onDotMouseDown(e, 'balancer1-out2')}
+                onMouseUp={(e) => onDotMouseUp(e, 'balancer1-out2')} />
+            </div>
+          </div>
+
+          {/* 均衡器2 */}
+          <div 
+            className="balancer-wrapper"
+            style={{ 
+              transform: `translate(${balancerPositions.balancer2.x}px, ${balancerPositions.balancer2.y}px)`,
+              cursor: draggingBalancer === 'balancer2' ? 'grabbing' : 'grab'
+            }}
+            onMouseDown={(e) => onBalancerMouseDown(e, 'balancer2')}>
+            <div ref={setDotRef('balancer2-in')} className="dot dot-left"
+              onMouseDown={(e) => onDotMouseDown(e, 'balancer2-in')}
+              onMouseUp={(e) => onDotMouseUp(e, 'balancer2-in')} />
+            <div style={{ position: 'relative', width: '180px', flexShrink: 0 }}>
+              <img src={level3Balancer} alt="均衡器" className="balancer-img" draggable={false} style={{ width: '100%', display: 'block' }} />
+              <div ref={setDotRef('balancer2-out1')} className="dot"
+                style={{ position: 'absolute', right: 10, top: '35%', transform: 'translateY(-50%)' }}
+                onMouseDown={(e) => onDotMouseDown(e, 'balancer2-out1')}
+                onMouseUp={(e) => onDotMouseUp(e, 'balancer2-out1')} />
+              <div ref={setDotRef('balancer2-out2')} className="dot"
+                style={{ position: 'absolute', right: 10, bottom: 10, transform: 'none' }}
+                onMouseDown={(e) => onDotMouseDown(e, 'balancer2-out2')}
+                onMouseUp={(e) => onDotMouseUp(e, 'balancer2-out2')} />
+            </div>
+          </div>
+
+          {/* 均衡器3 */}
+          <div 
+            className="balancer-wrapper"
+            style={{ 
+              transform: `translate(${balancerPositions.balancer3.x}px, ${balancerPositions.balancer3.y}px)`,
+              cursor: draggingBalancer === 'balancer3' ? 'grabbing' : 'grab'
+            }}
+            onMouseDown={(e) => onBalancerMouseDown(e, 'balancer3')}>
+            <div ref={setDotRef('balancer3-in')} className="dot dot-left"
+              onMouseDown={(e) => onDotMouseDown(e, 'balancer3-in')}
+              onMouseUp={(e) => onDotMouseUp(e, 'balancer3-in')} />
+            <div style={{ position: 'relative', width: '180px', flexShrink: 0 }}>
+              <img src={level3Balancer} alt="均衡器" className="balancer-img" draggable={false} style={{ width: '100%', display: 'block' }} />
+              <div ref={setDotRef('balancer3-out1')} className="dot"
+                style={{ position: 'absolute', right: 10, top: '35%', transform: 'translateY(-50%)' }}
+                onMouseDown={(e) => onDotMouseDown(e, 'balancer3-out1')}
+                onMouseUp={(e) => onDotMouseUp(e, 'balancer3-out1')} />
+              <div ref={setDotRef('balancer3-out2')} className="dot"
+                style={{ position: 'absolute', right: 10, bottom: 10, transform: 'none' }}
+                onMouseDown={(e) => onDotMouseDown(e, 'balancer3-out2')}
+                onMouseUp={(e) => onDotMouseUp(e, 'balancer3-out2')} />
             </div>
           </div>
         </div>
