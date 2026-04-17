@@ -8,10 +8,9 @@ import ProfilePage from './pages/ProfilePage'
 import TutorialPage from './pages/TutorialPage'
 import Level2Page from './pages/Level2Page'
 import Level3Page from './pages/levels/Level3Page'
-import Level4Page from './pages/levels/Level4Page'
 import './utils/achievementDebug' // 引入成就调试工具
 
-type Page = 'home' | 'levels' | 'shop' | 'profile' | 'tutorial' | 'level2' | 'level3' | 'level4'
+type Page = 'home' | 'levels' | 'shop' | 'profile' | 'tutorial' | 'level2' | 'level3'
 
 function AppContent(): React.JSX.Element {
   const [currentPage, setCurrentPage] = useState<Page>('home')
@@ -65,7 +64,6 @@ function AppContent(): React.JSX.Element {
         {currentPage === 'tutorial' && <TutorialPage onBack={() => navigateTo('levels')} onNextLevel={() => navigateTo('level2')} />}
         {currentPage === 'level2' && <Level2Page onBack={() => navigateTo('levels')} />}
         {currentPage === 'level3' && <Level3Page onBack={() => navigateTo('levels')} />}
-        {currentPage === 'level4' && <Level4Page onBack={() => navigateTo('levels')} />}
         {currentPage === 'shop' && <ShopPage onBack={goHome} />}
         {currentPage === 'profile' && <ProfilePage onBack={goHome} />}
       </div>
