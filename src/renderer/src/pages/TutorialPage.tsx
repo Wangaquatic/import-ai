@@ -15,13 +15,24 @@ interface TutorialPageProps {
 interface Point { x: number; y: number }
 interface Connection { from: string; to: string }
 interface SavedState { connections: Connection[]; pos: { x: number; y: number } }
-interface Particle { id: number; color: string; from: string; to: string; progress: number; speed: number; done: boolean }
+interface Particle { 
+  id: number
+  color: string
+  path: string[]
+  currentSegment: number
+  progress: number
+  speed: number
+  waitingAt: string | null
+  waitTime: number
+  done: boolean
+}
 
 const SAVE_KEY = 'tutorial_saved_state'
 const COINS_KEY = 'player_coins'
 const TUTORIAL_REWARD_KEY = 'tutorial_reward_claimed'
 const TUTORIAL_PASSED_KEY = 'tutorial_passed'
 const HIDDEN_PARAMS_KEY = 'tutorial_hidden_params'
+const CLASSIFIER_DELAY = 0.1 // 分类器时延：0.1秒
 
 const TutorialPage: React.FC<TutorialPageProps> = ({ onBack, onNextLevel }) => {
   const particles = React.useMemo(() => {
@@ -168,96 +179,173 @@ const TutorialPage: React.FC<TutorialPageProps> = ({ onBack, onNextLevel }) => {
     // 启动计时器
     timerRef.current = setInterval(() => setElapsed(e => e + 1), 1000)
 
-    const inputConn = connections.find(c => c.from === 'input-out')
+    // 判断连接是否正确
     const out1Conn = connections.find(c => c.from === 'classifier-out1')
     const out2Conn = connections.find(c => c.from === 'classifier-out2')
-
-    // 判断连接是否正确
-    // classifier-out1 连 target-in = 正确，连 no-target-in = 错误
-    // classifier-out2 连 no-target-in = 正确，连 target-in = 错误
     const out1IsCorrect = out1Conn?.to === 'target-in'
     const out2IsCorrect = out2Conn?.to === 'no-target-in'
 
     // 根据隐藏参数调整准确率
     const accuracyBonus = calculateAccuracyBonus()
-    const baseCorrectRatio = 0.75 + accuracyBonus // 基础75%，可通过隐藏参数提升或降低
+    const baseCorrectRatio = 0.75 + accuracyBonus
     const baseWrongRatio = 1 - baseCorrectRatio
 
-    // 计算每条线的正确和错误数量
     const out1Correct = Math.round(20 * baseCorrectRatio)
     const out1Wrong = 20 - out1Correct
     const out2Correct = Math.round(20 * baseCorrectRatio)
     const out2Wrong = 20 - out2Correct
 
-    totalRef.current = { red: out1Correct, blue: out2Correct }
+    // 构建完整路径
+    const buildFullPaths = (start: string): string[][] => {
+      const allPaths: string[][] = []
+      
+      const explore = (currentOut: string, path: string[]) => {
+        const conn = connections.find(c => c.from === currentOut)
+        if (!conn) return
+        
+        const targetIn = conn.to
+        const newPath = [...path, targetIn]
+        
+        // 如果到达最终输出
+        if (targetIn.startsWith('target') || targetIn.startsWith('no-target')) {
+          allPaths.push(newPath)
+          return
+        }
+        
+        // 如果到达分类器输入端，找到输出端
+        if (targetIn === 'classifier-in') {
+          const outputs = connections.filter(c => c.from.startsWith('classifier-out'))
+          outputs.forEach(outConn => {
+            explore(outConn.from, [...newPath, outConn.from])
+          })
+        }
+      }
+      
+      explore(start, [start])
+      return allPaths
+    }
 
-    let id = 0
+    const allPaths = buildFullPaths('input-out')
+    
+    if (allPaths.length === 0) {
+      setTesting(false)
+      if (timerRef.current) clearInterval(timerRef.current)
+      return
+    }
+
+    // 创建粒子：20红+20蓝
     const particles: Particle[] = []
-
-    // 左边：红蓝各20随机混合
-    if (inputConn) {
-      const inputColors = [...Array(20).fill('#ef4444'), ...Array(20).fill('#3b82f6')].sort(() => Math.random() - 0.5)
-      inputColors.forEach((color, i) => {
-        particles.push({ id: id++, color, from: inputConn.from, to: inputConn.to, progress: -(i * 0.1), speed: 0.003, done: false })
+    let id = 0
+    
+    // 输入流：红蓝混合
+    const inputColors = [...Array(20).fill('#ef4444'), ...Array(20).fill('#3b82f6')].sort(() => Math.random() - 0.5)
+    inputColors.forEach((color, i) => {
+      // 根据颜色选择路径
+      let targetPath: string[] = []
+      if (color === '#ef4444') {
+        // 红色应该去target-in
+        targetPath = allPaths.find(p => p[p.length - 1] === 'target-in') || allPaths[0]
+      } else {
+        // 蓝色应该去no-target-in
+        targetPath = allPaths.find(p => p[p.length - 1] === 'no-target-in') || allPaths[0]
+      }
+      
+      particles.push({
+        id: id++,
+        color,
+        path: targetPath,
+        currentSegment: 0,
+        progress: -(i * 0.1),
+        speed: 0.01,
+        waitingAt: null,
+        waitTime: 0,
+        done: false
       })
-    }
-
-    const rightDelay = -0.5
-    // out1 连线：正确时使用计算的比例，错误时反转
-    if (out1Conn) {
-      const correctCount = out1IsCorrect ? out1Correct : out1Wrong
-      const wrongCount = out1IsCorrect ? out1Wrong : out1Correct
-      const mainColor = out1IsCorrect ? '#ef4444' : '#3b82f6'
-      const wrongColor = out1IsCorrect ? '#3b82f6' : '#ef4444'
-      const out1Colors = [...Array(correctCount).fill(mainColor), ...Array(wrongCount).fill(wrongColor)].sort(() => Math.random() - 0.5)
-      out1Colors.forEach((color, i) => {
-        particles.push({ id: id++, color, from: out1Conn.from, to: out1Conn.to, progress: rightDelay - i * 0.15, speed: 0.003, done: false })
-      })
-    }
-    // out2 连线：正确时使用计算的比例，错误时反转
-    if (out2Conn) {
-      const correctCount = out2IsCorrect ? out2Correct : out2Wrong
-      const wrongCount = out2IsCorrect ? out2Wrong : out2Correct
-      const mainColor = out2IsCorrect ? '#3b82f6' : '#ef4444'
-      const wrongColor = out2IsCorrect ? '#ef4444' : '#3b82f6'
-      const out2Colors = [...Array(correctCount).fill(mainColor), ...Array(wrongCount).fill(wrongColor)].sort(() => Math.random() - 0.5)
-      out2Colors.forEach((color, i) => {
-        particles.push({ id: id++, color, from: out2Conn.from, to: out2Conn.to, progress: rightDelay - i * 0.15, speed: 0.003, done: false })
-      })
-    }
+    })
 
     setTestParticles(particles)
 
     const animate = () => {
       setTestParticles(prev => {
         const next = prev.map(p => {
+          if (p.done) return p
+          
+          // 如果正在节点内等待
+          if (p.waitingAt) {
+            const newWaitTime = p.waitTime + 0.016 * speedMultiplierRef.current
+            if (newWaitTime >= CLASSIFIER_DELAY) {
+              // 等待结束
+              return {
+                ...p,
+                waitingAt: null,
+                waitTime: 0,
+                currentSegment: p.currentSegment + 1,
+                progress: 0
+              }
+            }
+            return { ...p, waitTime: newWaitTime }
+          }
+          
+          // 还没开始
+          if (p.progress < 0) {
+            return { ...p, progress: p.progress + p.speed * speedMultiplierRef.current }
+          }
+          
+          // 正常移动
           const newProgress = p.progress + p.speed * speedMultiplierRef.current
-          return { ...p, progress: newProgress, done: newProgress >= 1 }
+          
+          if (newProgress >= 1) {
+            const currentTo = p.path[p.currentSegment + 1]
+            
+            if (!currentTo) {
+              return { ...p, done: true, progress: 1 }
+            }
+            
+            // 检查到达的节点类型
+            if (currentTo === 'classifier-in') {
+              // 到达分类器输入端，开始等待
+              return {
+                ...p,
+                progress: 1,
+                waitingAt: currentTo,
+                waitTime: 0,
+                currentSegment: p.currentSegment + 1
+              }
+            } else if (currentTo.startsWith('target') || currentTo.startsWith('no-target')) {
+              // 到达输出流
+              return { ...p, done: true, progress: 1, currentSegment: p.currentSegment + 1 }
+            } else {
+              // 其他情况，直接进入下一段
+              return {
+                ...p,
+                currentSegment: p.currentSegment + 1,
+                progress: 0
+              }
+            }
+          }
+          
+          return { ...p, progress: newProgress }
         })
 
-        // 柱状图：用已出发方块数/总数，每出发一个方块涨一格，完全匀速
-        const rightAll = next.filter(p => p.from === 'classifier-out1' || p.from === 'classifier-out2')
+        // 统计进度
+        const rightAll = next.filter(p => {
+          const seg = p.currentSegment
+          return seg > 0 && (p.path[seg]?.startsWith('classifier-out') || p.path[seg]?.startsWith('target') || p.path[seg]?.startsWith('no-target'))
+        })
         const rightTotal = rightAll.length || 1
-        const rightStarted = rightAll.filter(p => p.progress > 0).length
+        const rightStarted = rightAll.filter(p => p.progress > 0 || p.done).length
         const ratio = rightStarted / rightTotal
 
         setTargetProgress(Math.min(ratio * (out1IsCorrect ? baseCorrectRatio : baseWrongRatio), out1IsCorrect ? baseCorrectRatio : baseWrongRatio))
         setNoTargetProgress(Math.min(ratio * (out2IsCorrect ? baseCorrectRatio : baseWrongRatio), out2IsCorrect ? baseCorrectRatio : baseWrongRatio))
 
-        // 右边两条线都完成后，左边停止
-        const rightParticles = next.filter(p => p.from === 'classifier-out1' || p.from === 'classifier-out2')
-        const rightDone = rightParticles.length > 0 && rightParticles.every(p => p.done)
-        const final = next.map(p =>
-          rightDone && p.from === 'input-out' ? { ...p, done: true } : p
-        )
-
-        if (final.every(p => p.done)) {
+        if (next.every(p => p.done)) {
           setTesting(false)
           const isPass = out1IsCorrect && out2IsCorrect && baseCorrectRatio >= 0.75
           setTargetProgress(out1IsCorrect ? baseCorrectRatio : baseWrongRatio)
           setNoTargetProgress(out2IsCorrect ? baseCorrectRatio : baseWrongRatio)
           if (timerRef.current) clearInterval(timerRef.current)
-          // 已通关过：不再弹任何结果弹窗
+          
           if (!everPassed.current) {
             if (isPass) {
               everPassed.current = true
@@ -268,10 +356,9 @@ const TutorialPage: React.FC<TutorialPageProps> = ({ onBack, onNextLevel }) => {
               setTestResult('fail')
             }
           } else {
-            // 已通关过，静默更新 passed 状态
             if (isPass) setPassed(true)
           }
-          // 发放金币奖励（只能一次）
+          
           if (isPass && !rewardClaimed.current) {
             rewardClaimed.current = true
             localStorage.setItem(TUTORIAL_REWARD_KEY, '1')
@@ -283,8 +370,9 @@ const TutorialPage: React.FC<TutorialPageProps> = ({ onBack, onNextLevel }) => {
           }
           return []
         }
+        
         animFrameRef.current = requestAnimationFrame(animate)
-        return final
+        return next
       })
     }
     animFrameRef.current = requestAnimationFrame(animate)
@@ -324,9 +412,18 @@ const TutorialPage: React.FC<TutorialPageProps> = ({ onBack, onNextLevel }) => {
 
   const renderTestParticles = () => testParticles.map(p => {
     if (p.progress < 0 || p.done) return null
-    const from = getDotCenter(p.from)
-    const to = getDotCenter(p.to)
+    if (p.waitingAt) return null // 等待中不显示
+    
+    // 获取当前线段的起点和终点
+    const fromId = p.path[p.currentSegment]
+    const toId = p.path[p.currentSegment + 1]
+    
+    if (!fromId || !toId) return null
+    
+    const from = getDotCenter(fromId)
+    const to = getDotCenter(toId)
     if (!from || !to) return null
+    
     const t = Math.min(p.progress, 1)
     const x = from.x + (to.x - from.x) * t - 4
     const y = from.y + (to.y - from.y) * t - 4
