@@ -137,7 +137,7 @@ const HiddenLevelModal: React.FC<HiddenLevelModalProps> = ({ onClose, onTrain, o
       已解锁: alreadyUnlocked,
       满足条件: meetsRequirement,
       '准确率>=94.5': result >= 94.5,
-      '连接正确': isConnectionCorrect,
+      '连接状态': isConnectionCorrect,
       '未解锁': !alreadyUnlocked
     })
     

@@ -3,7 +3,7 @@ import './LevelsPage.css'
 
 interface LevelsPageProps {
   onBack: () => void
-  onNavigate: (page: 'tutorial' | 'level3' | 'level4') => void
+  onNavigate: (page: 'tutorial' | 'level2' | 'level3' | 'level4') => void
 }
 
 const levels = [
@@ -35,6 +35,7 @@ const LevelsPage: React.FC<LevelsPageProps> = ({ onBack, onNavigate }) => {
             onClick={() => {
               if (level.locked) return
               if (level.tutorial) onNavigate('tutorial')
+              else if (level.id === 2) onNavigate('level2')
               else if (level.id === 3) onNavigate('level3')
               else if (level.id === 4) onNavigate('level4')
               else alert(`开始关卡 ${level.id}`)

@@ -6,7 +6,7 @@ import LevelsPage from './pages/LevelsPage'
 import ShopPage from './pages/ShopPage'
 import ProfilePage from './pages/ProfilePage'
 import TutorialPage from './pages/TutorialPage'
-import Level2Page from './pages/Level2Page'
+import Level2Page from './pages/levels/Level2Page'
 import Level3Page from './pages/levels/Level3Page'
 import Level4Page from './pages/levels/Level4Page'
 import './utils/achievementDebug' // 引入成就调试工具
