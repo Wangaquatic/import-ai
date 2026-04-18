@@ -346,19 +346,19 @@ const TutorialPage: React.FC<TutorialPageProps> = ({ onBack, onNextLevel }) => {
   const handleHiddenTrain = async (params: TrainingParams): Promise<number> => {
     // 根据参数计算准确率
     // 最优参数组合：learningRate=0.1, batchSize=32, epochs=20, optimizer=Adam
-    let accuracy = 75 // 基础准确率
+    let accuracy = 70 // 基础准确率
     
-    if (params.learningRate === 0.1) accuracy += 3
-    else if (params.learningRate === 0.001) accuracy -= 2
+    if (params.learningRate === 0.1) accuracy += 8
+    else if (params.learningRate === 0.001) accuracy -= 3
     
-    if (params.batchSize === 32) accuracy += 3
-    else if (params.batchSize === 8) accuracy -= 2
+    if (params.batchSize === 32) accuracy += 6
+    else if (params.batchSize === 8) accuracy -= 3
     
-    if (params.epochs === 20) accuracy += 4
+    if (params.epochs === 20) accuracy += 6
     else if (params.epochs === 5) accuracy -= 3
     
-    if (params.optimizer === 'Adam') accuracy += 5
-    else if (params.optimizer === 'SGD') accuracy -= 2
+    if (params.optimizer === 'Adam') accuracy += 8
+    else if (params.optimizer === 'SGD') accuracy -= 3
     
     // 添加随机波动
     accuracy += Math.random() * 2 - 1

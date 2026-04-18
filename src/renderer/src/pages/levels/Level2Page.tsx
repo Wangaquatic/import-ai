@@ -3,6 +3,7 @@ import './Level2Page.css'
 import level2Input from '../../assets/level2-input.jpg'
 import level2Output from '../../assets/level2-output2.jpg'
 import level2Expert from '../../assets/level2-expert.jpg'
+import Level2HiddenModal, { type ExpertSystemParams } from '../../components/Level2HiddenModal'
 
 interface Level2PageProps {
   onBack: () => void
@@ -43,6 +44,7 @@ interface DraggingNodeState {
 const COINS_KEY = 'player_coins'
 const LEVEL2_REWARD_KEY = 'level2_reward_claimed'
 const LEVEL2_SAVE_KEY = 'level2_saved_state'
+const LEVEL2_HIDDEN_PARAMS_KEY = 'level2_hidden_params'
 
 const Level2Page: React.FC<Level2PageProps> = ({ onBack }) => {
   // 漂浮的二进制数字背景
@@ -92,6 +94,26 @@ const Level2Page: React.FC<Level2PageProps> = ({ onBack }) => {
   const [saved, setSaved] = useState(false)
   const [draggingFromLibrary, setDraggingFromLibrary] = useState<DraggingNodeState | null>(null)
   const [draggingPlacedNode, setDraggingPlacedNode] = useState<{ nodeId: string; offsetX: number; offsetY: number } | null>(null)
+  const [showHiddenLevel, setShowHiddenLevel] = useState(false)
+  const [elapsed, setElapsed] = useState(0)
+  const [hiddenParams, setHiddenParams] = useState<ExpertSystemParams>(() => {
+    try {
+      const saved = localStorage.getItem(LEVEL2_HIDDEN_PARAMS_KEY)
+      return saved ? JSON.parse(saved) : {
+        confidenceThreshold: 0.7,
+        ruleWeight: 0.5,
+        filterStrength: 0.7,
+        decisionMode: 'Balanced'
+      }
+    } catch {
+      return {
+        confidenceThreshold: 0.7,
+        ruleWeight: 0.5,
+        filterStrength: 0.7,
+        decisionMode: 'Balanced'
+      }
+    }
+  })
 
   const rewardClaimed = useRef(!!localStorage.getItem(LEVEL2_REWARD_KEY))
   const speedMultiplierRef = useRef(1.0)
@@ -329,6 +351,87 @@ const Level2Page: React.FC<Level2PageProps> = ({ onBack }) => {
     speedMultiplierRef.current = next
   }
 
+  const handleHiddenTrain = async (params: ExpertSystemParams): Promise<number> => {
+    // 模拟专家系统训练，根据参数计算准确率
+    // 最优参数：confidenceThreshold=0.9, ruleWeight=0.8, filterStrength=0.95, decisionMode="Balanced"
+    let accuracy = 50
+    
+    // 置信度阈值影响（最优0.9）
+    if (params.confidenceThreshold === 0.9) {
+      accuracy += 20
+    } else if (params.confidenceThreshold === 0.5) {
+      accuracy += 10
+    }
+    
+    // 规则权重影响（最优0.8）
+    if (params.ruleWeight === 0.8) {
+      accuracy += 20
+    } else if (params.ruleWeight === 0.3) {
+      accuracy += 10
+    }
+    
+    // 过滤强度影响（最优0.95）
+    if (params.filterStrength === 0.95) {
+      accuracy += 20
+    } else if (params.filterStrength === 0.4) {
+      accuracy += 10
+    }
+    
+    // 决策模式影响（最优Balanced）
+    if (params.decisionMode === 'Balanced') {
+      accuracy += 20
+    } else if (params.decisionMode === 'Strict') {
+      accuracy += 10
+    }
+    
+    // 添加一些随机性
+    accuracy += Math.random() * 5 - 2.5
+    
+    return Math.min(100, Math.max(0, accuracy))
+  }
+
+  const handleHiddenSave = (params: ExpertSystemParams): void => {
+    setHiddenParams(params)
+    localStorage.setItem(LEVEL2_HIDDEN_PARAMS_KEY, JSON.stringify(params))
+  }
+
+  // 根据隐藏参数计算准确率系数（与隐藏关卡测试结果一致）
+  const calculateAccuracyMultiplier = useCallback((): number => {
+    // 使用与隐藏关卡相同的计算逻辑
+    let accuracy = 50
+    
+    // 置信度阈值影响（最优0.9）
+    if (hiddenParams.confidenceThreshold === 0.9) {
+      accuracy += 20
+    } else if (hiddenParams.confidenceThreshold === 0.5) {
+      accuracy += 10
+    }
+    
+    // 规则权重影响（最优0.8）
+    if (hiddenParams.ruleWeight === 0.8) {
+      accuracy += 20
+    } else if (hiddenParams.ruleWeight === 0.3) {
+      accuracy += 10
+    }
+    
+    // 过滤强度影响（最优0.95）
+    if (hiddenParams.filterStrength === 0.95) {
+      accuracy += 20
+    } else if (hiddenParams.filterStrength === 0.4) {
+      accuracy += 10
+    }
+    
+    // 决策模式影响（最优Balanced）
+    if (hiddenParams.decisionMode === 'Balanced') {
+      accuracy += 20
+    } else if (hiddenParams.decisionMode === 'Strict') {
+      accuracy += 10
+    }
+    
+    // 转换为0-1的系数
+    return Math.min(Math.max(accuracy / 100, 0.5), 1.0)
+  }, [hiddenParams])
+
   const handleClearLines = (): void => {
     setConnections([])
     setTestParticles([])
@@ -356,6 +459,14 @@ const Level2Page: React.FC<Level2PageProps> = ({ onBack }) => {
     setTesting(true)
     setCorrectRate(0)
     setTrainingProgress(0)
+    setElapsed(0)
+
+    // 启动计时器
+    if (timerRef.current) clearInterval(timerRef.current)
+    const startTime = Date.now()
+    timerRef.current = setInterval(() => {
+      setElapsed(Math.floor((Date.now() - startTime) / 1000))
+    }, 1000)
 
     const colors: ('red' | 'green' | 'blue')[] = [
       ...Array(10).fill('red'),
@@ -440,26 +551,47 @@ const Level2Page: React.FC<Level2PageProps> = ({ onBack }) => {
           done: p.progress + p.speed * speedMultiplierRef.current >= 1
         }))
 
-        const totalParticles = next.length
-        const completedParticles = next.filter((p) => p.done).length
-        setTrainingProgress(totalParticles > 0 ? completedParticles / totalParticles : 0)
+        // 计算进度：只统计到达输出节点的粒子
+        const outputParticles = next.filter((p) => p.to === 'output-in')
+        const outputCompletedParticles = outputParticles.filter((p) => p.done).length
+        
+        // 只有当输出节点有粒子时才更新进度
+        if (outputParticles.length > 0) {
+          setTrainingProgress(outputCompletedParticles / outputParticles.length)
+        }
 
-        // 计算正确率：红色和蓝色是正确的目标，绿色是错误的
-        // 10红+10蓝=100%, 10红+10绿=50%, 10蓝+10绿=50%, 10红=50%, 10蓝=50%, 10绿=0%
-        const outputParticles = next.filter((p) => p.to === 'output-in' && p.progress >= 0)
+        // 只在输出节点有数据流入时才计算正确率
+        // 过滤出已经到达输出节点且进度超过20%的粒子（稍微延迟一下正确率增长）
+        const activeOutputParticles = outputParticles.filter((p) => p.progress > 0.8)
         
-        const correctOutputs = outputParticles.filter((p) => p.color === 'red' || p.color === 'blue').length
-        
-        // 正确率 = 正确颜色数量 / 20（总共应该有20个正确的）
-        // 如果只有10个正确的到达，正确率是50%
-        const currentCorrectRate = correctOutputs / 20
-        setCorrectRate(currentCorrectRate)
+        if (activeOutputParticles.length > 0) {
+          const correctOutputs = activeOutputParticles.filter((p) => p.color === 'red' || p.color === 'blue').length
+          
+          // 基础正确率 = 正确颜色数量 / 20（总共应该有20个正确的）
+          const baseCorrectRate = correctOutputs / 20
+          
+          // 应用隐藏参数的影响
+          const accuracyMultiplier = calculateAccuracyMultiplier()
+          const currentCorrectRate = baseCorrectRate * accuracyMultiplier
+          
+          setCorrectRate(currentCorrectRate)
+        }
 
         if (next.every((p) => p.done)) {
           setTesting(false)
-          if (timerRef.current) clearInterval(timerRef.current)
+          if (timerRef.current) {
+            clearInterval(timerRef.current)
+            timerRef.current = null
+          }
 
-          if (currentCorrectRate >= 1.0 && !rewardClaimed.current) {
+          // 获取最终正确率用于奖励判断
+          const finalOutputParticles = next.filter((p) => p.to === 'output-in')
+          const finalCorrectOutputs = finalOutputParticles.filter((p) => p.color === 'red' || p.color === 'blue').length
+          const finalBaseCorrectRate = finalCorrectOutputs / 20
+          const finalAccuracyMultiplier = calculateAccuracyMultiplier()
+          const finalCorrectRate = finalBaseCorrectRate * finalAccuracyMultiplier
+
+          if (finalCorrectRate >= 1.0 && !rewardClaimed.current) {
             rewardClaimed.current = true
             localStorage.setItem(LEVEL2_REWARD_KEY, '1')
             const reward = 200
@@ -469,7 +601,13 @@ const Level2Page: React.FC<Level2PageProps> = ({ onBack }) => {
             setShowReward(true)
             setTimeout(() => setShowReward(false), 3000)
           }
-          return []
+          
+          // 不要清空粒子，让它们保持显示
+          if (animFrameRef.current) {
+            cancelAnimationFrame(animFrameRef.current)
+            animFrameRef.current = null
+          }
+          return next
         }
 
         if (animFrameRef.current) {
@@ -480,7 +618,7 @@ const Level2Page: React.FC<Level2PageProps> = ({ onBack }) => {
     }
 
     animFrameRef.current = requestAnimationFrame(animate)
-  }, [testing, connections, currentColorMode])
+  }, [testing, connections, currentColorMode, calculateAccuracyMultiplier])
 
   useEffect(() => {
     return () => {
@@ -753,6 +891,29 @@ const Level2Page: React.FC<Level2PageProps> = ({ onBack }) => {
       <button className="speed-btn" onClick={handleSpeedChange}>
         ▶▶ {speedMultiplier.toFixed(1)}x
       </button>
+
+      {/* 计时器 */}
+      {testing && (
+        <div className="timer-display">
+          {Math.floor(elapsed / 60)}:{(elapsed % 60).toString().padStart(2, '0')}
+        </div>
+      )}
+
+      {/* 隐藏关卡按钮 */}
+      <button className="hidden-level-btn" onClick={() => setShowHiddenLevel(true)} title="隐藏关卡">
+        🔧
+      </button>
+
+      {/* 隐藏关卡模态框 */}
+      {showHiddenLevel && (
+        <Level2HiddenModal
+          onClose={() => setShowHiddenLevel(false)}
+          onTrain={handleHiddenTrain}
+          onSave={handleHiddenSave}
+          initialParams={hiddenParams}
+          currentColorMode={currentColorMode}
+        />
+      )}
     </div>
   )
 }

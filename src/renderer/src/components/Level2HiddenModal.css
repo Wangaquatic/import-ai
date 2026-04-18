@@ -1,0 +1,37 @@
+/* 复用 HiddenLevelModal.css 的样式 */
+@import './HiddenLevelModal.css';
+
+/* 第二关特定样式覆盖 */
+.level2-hidden .panel-title {
+  color: #f59e0b;
+}
+
+.level2-hidden .editable-param {
+  background: rgba(245, 158, 11, 0.15);
+  border-bottom: 2px solid #f59e0b;
+}
+
+.level2-hidden .editable-param.drag-over {
+  background: rgba(245, 158, 11, 0.3);
+  border-bottom-color: #fbbf24;
+}
+
+.level2-hidden .train-btn {
+  background: rgba(245, 158, 11, 0.2);
+  border: 1px solid rgba(245, 158, 11, 0.5);
+  color: #fbbf24;
+}
+
+.level2-hidden .train-btn:hover:not(:disabled) {
+  background: rgba(245, 158, 11, 0.35);
+}
+
+.level2-hidden .draggable-block {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.level2-hidden .draggable-block:hover {
+  background: rgba(245, 158, 11, 0.2);
+  border-color: rgba(245, 158, 11, 0.5);
+}

@@ -22,10 +22,12 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
 
   // 检查成就状态并输出调试信息
   const paramMasterUnlocked = !!localStorage.getItem('achievement_param_master')
+  const expertTunerUnlocked = !!localStorage.getItem('achievement_expert_tuner')
   const hiddenExplorerUnlocked = checkHiddenLevelsComplete()
   
   console.log('📊 个人中心 - 成就状态:', {
     参数调优大师: paramMasterUnlocked,
+    专家系统调优师: expertTunerUnlocked,
     隐藏探索者: hiddenExplorerUnlocked,
     隐藏关卡完成数: localStorage.getItem('hidden_levels_completed')
   })
@@ -52,6 +54,14 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
       },
       { 
         id: 6, 
+        name: '专家系统调优师', 
+        desc: '在第二关隐藏关卡中达到完美准确率（100%）', 
+        unlocked: expertTunerUnlocked, 
+        icon: '⚙️',
+        hidden: false
+      },
+      { 
+        id: 7, 
         name: '隐藏探索者', 
         desc: '完成所有隐藏关卡（3/3）', 
         unlocked: hiddenExplorerUnlocked, 
