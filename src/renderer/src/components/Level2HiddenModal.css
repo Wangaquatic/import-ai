@@ -6,6 +6,122 @@
   color: #f59e0b;
 }
 
+.level2-hidden .header-buttons {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.level2-hidden .hint-button-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.level2-hidden .hint-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(251, 191, 36, 0.2);
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  color: #fbbf24;
+  font-size: 18px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.level2-hidden .hint-btn:hover {
+  background: rgba(251, 191, 36, 0.3);
+  transform: scale(1.1);
+}
+
+/* 浮动提示气泡 - 在小灯泡旁边 */
+.floating-hint-arrow-beside {
+  position: absolute;
+  left: 50px;
+  top: -5px;
+  cursor: pointer;
+  animation: gentleBounce 2s ease-in-out infinite;
+  z-index: 10;
+}
+
+.floating-hint-arrow-beside .arrow-bubble {
+  position: relative;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border: 2px solid #f59e0b;
+  border-radius: 12px;
+  padding: 4px 10px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 4px 16px rgba(245, 158, 11, 0.4);
+  transition: all 0.3s ease;
+}
+
+.floating-hint-arrow-beside .arrow-bubble::before {
+  content: '';
+  position: absolute;
+  right: -6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+  border-left: 6px solid #f59e0b;
+}
+
+.floating-hint-arrow-beside .arrow-bubble::after {
+  content: '';
+  position: absolute;
+  right: -5px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 5px solid #fef3c7;
+}
+
+.floating-hint-arrow-beside:hover .arrow-bubble {
+  transform: scale(1.05);
+  box-shadow: 0 6px 20px rgba(245, 158, 11, 0.5);
+}
+
+.floating-hint-arrow-beside .bubble-emoji {
+  font-size: 14px;
+  animation: bubblePulse 1.5s ease-in-out infinite;
+}
+
+.floating-hint-arrow-beside .bubble-text {
+  font-size: 11px;
+  font-weight: 700;
+  color: #92400e;
+  white-space: nowrap;
+}
+
+@keyframes gentleBounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes bubblePulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+}
+
 .level2-hidden .editable-param {
   background: rgba(245, 158, 11, 0.15);
   border-bottom: 2px solid #f59e0b;
@@ -20,10 +136,49 @@
   background: rgba(245, 158, 11, 0.2);
   border: 1px solid rgba(245, 158, 11, 0.5);
   color: #fbbf24;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
 .level2-hidden .train-btn:hover:not(:disabled) {
   background: rgba(245, 158, 11, 0.35);
+  transform: translateY(-1px);
+}
+
+.level2-hidden .train-btn.training {
+  animation: none !important;
+  transform: none !important;
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+.level2-hidden .save-btn,
+.level2-hidden .apply-btn {
+  background: rgba(245, 158, 11, 0.2);
+  border: 1px solid rgba(245, 158, 11, 0.5);
+  color: #fbbf24;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.level2-hidden .save-btn:hover,
+.level2-hidden .apply-btn:hover {
+  background: rgba(245, 158, 11, 0.35);
+  transform: translateY(-1px);
+}
+
+.level2-hidden .save-btn.saved {
+  background: rgba(34, 197, 94, 0.2);
+  border-color: rgba(34, 197, 94, 0.5);
+  color: #22c55e;
 }
 
 .level2-hidden .draggable-block {
@@ -34,4 +189,233 @@
 .level2-hidden .draggable-block:hover {
   background: rgba(245, 158, 11, 0.2);
   border-color: rgba(245, 158, 11, 0.5);
+}
+
+/* 浮动提示箭头 */
+.result-container {
+  position: relative;
+  margin-top: 16px;
+}
+
+/* 提示弹窗 */
+.hint-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 400;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hint-modal {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border: 2px solid #f59e0b;
+  border-radius: 16px;
+  padding: 32px;
+  max-width: 480px;
+  width: 90%;
+  animation: popIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 8px 32px rgba(245, 158, 11, 0.3);
+}
+
+.hint-modal .hint-icon {
+  font-size: 48px;
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.hint-modal .hint-coins {
+  font-size: 20px;
+  font-weight: 700;
+  color: #92400e;
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.hint-modal .hint-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #92400e;
+  text-align: center;
+  margin: 0 0 20px 0;
+}
+
+.hint-modal .hint-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.hint-modal .hint-tip,
+.hint-modal .hint-effect {
+  background: rgba(255, 255, 255, 0.6);
+  padding: 12px 16px;
+  border-radius: 8px;
+  border-left: 4px solid #f59e0b;
+}
+
+.hint-modal .hint-tip strong,
+.hint-modal .hint-effect strong {
+  display: block;
+  color: #92400e;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.hint-modal .hint-tip p,
+.hint-modal .hint-effect p {
+  color: #451a03;
+  margin: 0;
+  line-height: 1.8;
+  font-size: 15px;
+  white-space: pre-line;
+}
+
+.hint-modal .hint-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hint-modal .hint-answer-btn {
+  width: 100%;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  border: 2px solid #d97706;
+  border-radius: 8px;
+  color: rgb(247, 243, 243);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+}
+
+.hint-modal .hint-answer-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(245, 158, 11, 0.5);
+}
+
+.hint-modal .hint-close {
+  width: 100%;
+  padding: 10px 24px;
+  background: rgba(245, 158, 11, 0.2);
+  border: 2px solid #f59e0b;
+  border-radius: 8px;
+  color: #92400e;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.hint-modal .hint-close:hover {
+  background: rgba(245, 158, 11, 0.3);
+  transform: translateY(-2px);
+}
+
+/* 金币消费提示 */
+.coin-spent-notice {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 500;
+  animation: coinNoticeIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.coin-spent-content {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border: 3px solid #f59e0b;
+  border-radius: 20px;
+  padding: 32px 48px;
+  box-shadow: 0 12px 40px rgba(245, 158, 11, 0.4);
+  text-align: center;
+  min-width: 300px;
+}
+
+.coin-spent-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+  animation: coinSpin 0.6s ease-out;
+}
+
+.coin-spent-text {
+  font-size: 24px;
+  font-weight: 700;
+  color: #92400e;
+  margin-bottom: 8px;
+}
+
+.coin-spent-subtext {
+  font-size: 16px;
+  color: #78350f;
+  font-weight: 600;
+}
+
+/* 参数列表样式 */
+.purchased-params {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.6);
+  padding: 16px 20px;
+  border-radius: 12px;
+  border: 2px solid rgba(245, 158, 11, 0.3);
+  margin-top: 16px;
+}
+
+.param-item {
+  font-family: 'SF Mono', 'Consolas', monospace;
+  font-size: 16px;
+  font-weight: 600;
+  color: #78350f;
+  text-align: left;
+  padding: 4px 0;
+}
+
+@keyframes coinNoticeIn {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.8);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes coinSpin {
+  0% {
+    transform: rotateY(0deg) scale(0.5);
+  }
+  50% {
+    transform: rotateY(180deg) scale(1.2);
+  }
+  100% {
+    transform: rotateY(360deg) scale(1);
+  }
+}
+
+/* 参数列表样式 */
+.purchased-params {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.15);
+  padding: 16px 20px;
+  border-radius: 12px;
+  border: 2px solid rgba(245, 158, 11, 0.3);
+  margin-top: 16px;
+}
+
+.param-item {
+  font-family: 'SF Mono', 'Consolas', monospace;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1a1a;
+  text-align: left;
+  padding: 4px 0;
 }

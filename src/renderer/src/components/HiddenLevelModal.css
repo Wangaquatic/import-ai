@@ -120,12 +120,14 @@
 }
 
 .pseudocode {
-  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-  font-size: 13px;
-  line-height: 1.8;
+  font-family: 'SF Mono', 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', 'Hiragino Sans GB', sans-serif;
+  font-size: 14px;
+  line-height: 2;
   color: #cbd5e1;
   margin: 0;
   white-space: pre-wrap;
+  font-weight: 500;
+  letter-spacing: 0.3px;
 }
 
 .editable-param {

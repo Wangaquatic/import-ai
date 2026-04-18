@@ -10,6 +10,28 @@ interface ProfilePageProps {
 const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
   const { user, logout } = useAuth()
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
+  const [currentCoins, setCurrentCoins] = useState(() => 
+    parseInt(localStorage.getItem('player_coins') || '0')
+  )
+
+  // 监听localStorage变化，实时更新金币数
+  React.useEffect(() => {
+    const updateCoins = () => {
+      const coins = parseInt(localStorage.getItem('player_coins') || '0')
+      setCurrentCoins(coins)
+    }
+
+    // 定时检查金币变化
+    const interval = setInterval(updateCoins, 100)
+
+    // 监听storage事件（跨标签页同步）
+    window.addEventListener('storage', updateCoins)
+
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener('storage', updateCoins)
+    }
+  }, [])
 
   if (!user) {
     return null
@@ -36,7 +58,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
     name: user.username,
     level: user.level,
     experience: user.experience,
-    coins: user.coins,
+    coins: currentCoins, // 使用实时更新的金币数
     completedLevels: 2,
     totalLevels: 8,
     achievements: [

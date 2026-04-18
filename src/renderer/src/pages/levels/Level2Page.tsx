@@ -102,15 +102,13 @@ const Level2Page: React.FC<Level2PageProps> = ({ onBack }) => {
       return saved ? JSON.parse(saved) : {
         confidenceThreshold: 0.7,
         ruleWeight: 0.5,
-        filterStrength: 0.7,
-        decisionMode: 'Balanced'
+        filterStrength: 0.7
       }
     } catch {
       return {
         confidenceThreshold: 0.7,
         ruleWeight: 0.5,
-        filterStrength: 0.7,
-        decisionMode: 'Balanced'
+        filterStrength: 0.7
       }
     }
   })
@@ -352,42 +350,50 @@ const Level2Page: React.FC<Level2PageProps> = ({ onBack }) => {
   }
 
   const handleHiddenTrain = async (params: ExpertSystemParams): Promise<number> => {
+    // 检查是否为最优参数组合
+    if (params.confidenceThreshold === 0.9 && 
+        params.ruleWeight === 0.8 && 
+        params.filterStrength === 0.95) {
+      return 100 // 最优参数固定返回100%
+    }
+    
     // 模拟专家系统训练，根据参数计算准确率
-    // 最优参数：confidenceThreshold=0.9, ruleWeight=0.8, filterStrength=0.95, decisionMode="Balanced"
-    let accuracy = 50
+    let multiplier = 0.7 // 基础70%
     
     // 置信度阈值影响（最优0.9）
     if (params.confidenceThreshold === 0.9) {
-      accuracy += 20
+      multiplier += 0.1
+    } else if (params.confidenceThreshold === 0.7) {
+      multiplier += 0.05
     } else if (params.confidenceThreshold === 0.5) {
-      accuracy += 10
+      multiplier += 0.025
     }
     
     // 规则权重影响（最优0.8）
     if (params.ruleWeight === 0.8) {
-      accuracy += 20
+      multiplier += 0.1
+    } else if (params.ruleWeight === 0.5) {
+      multiplier += 0.05
     } else if (params.ruleWeight === 0.3) {
-      accuracy += 10
+      multiplier += 0.025
     }
     
     // 过滤强度影响（最优0.95）
     if (params.filterStrength === 0.95) {
-      accuracy += 20
+      multiplier += 0.1
+    } else if (params.filterStrength === 0.7) {
+      multiplier += 0.05
     } else if (params.filterStrength === 0.4) {
-      accuracy += 10
+      multiplier += 0.025
     }
     
-    // 决策模式影响（最优Balanced）
-    if (params.decisionMode === 'Balanced') {
-      accuracy += 20
-    } else if (params.decisionMode === 'Strict') {
-      accuracy += 10
-    }
+    // 转换为百分比，限制在70%到100%之间
+    const accuracy = Math.min(Math.max(multiplier * 100, 70), 100)
     
-    // 添加一些随机性
-    accuracy += Math.random() * 5 - 2.5
+    // 添加一些随机波动（±1%）
+    const finalAccuracy = accuracy + (Math.random() * 2 - 1)
     
-    return Math.min(100, Math.max(0, accuracy))
+    return Math.min(Math.max(finalAccuracy, 70), 100)
   }
 
   const handleHiddenSave = (params: ExpertSystemParams): void => {
@@ -397,39 +403,45 @@ const Level2Page: React.FC<Level2PageProps> = ({ onBack }) => {
 
   // 根据隐藏参数计算准确率系数（与隐藏关卡测试结果一致）
   const calculateAccuracyMultiplier = useCallback((): number => {
-    // 使用与隐藏关卡相同的计算逻辑
-    let accuracy = 50
+    // 检查是否为最优参数组合
+    if (hiddenParams.confidenceThreshold === 0.9 && 
+        hiddenParams.ruleWeight === 0.8 && 
+        hiddenParams.filterStrength === 0.95) {
+      return 1.0 // 最优参数固定返回100%
+    }
+    
+    // 基础准确率系数为 0.7（70%）
+    let multiplier = 0.7
     
     // 置信度阈值影响（最优0.9）
     if (hiddenParams.confidenceThreshold === 0.9) {
-      accuracy += 20
+      multiplier += 0.1
+    } else if (hiddenParams.confidenceThreshold === 0.7) {
+      multiplier += 0.05
     } else if (hiddenParams.confidenceThreshold === 0.5) {
-      accuracy += 10
+      multiplier += 0.025
     }
     
     // 规则权重影响（最优0.8）
     if (hiddenParams.ruleWeight === 0.8) {
-      accuracy += 20
+      multiplier += 0.1
+    } else if (hiddenParams.ruleWeight === 0.5) {
+      multiplier += 0.05
     } else if (hiddenParams.ruleWeight === 0.3) {
-      accuracy += 10
+      multiplier += 0.025
     }
     
     // 过滤强度影响（最优0.95）
     if (hiddenParams.filterStrength === 0.95) {
-      accuracy += 20
+      multiplier += 0.1
+    } else if (hiddenParams.filterStrength === 0.7) {
+      multiplier += 0.05
     } else if (hiddenParams.filterStrength === 0.4) {
-      accuracy += 10
+      multiplier += 0.025
     }
     
-    // 决策模式影响（最优Balanced）
-    if (hiddenParams.decisionMode === 'Balanced') {
-      accuracy += 20
-    } else if (hiddenParams.decisionMode === 'Strict') {
-      accuracy += 10
-    }
-    
-    // 转换为0-1的系数
-    return Math.min(Math.max(accuracy / 100, 0.5), 1.0)
+    // 限制在0.7到1.0之间
+    return Math.min(Math.max(multiplier, 0.7), 1.0)
   }, [hiddenParams])
 
   const handleClearLines = (): void => {
@@ -654,16 +666,18 @@ const Level2Page: React.FC<Level2PageProps> = ({ onBack }) => {
       const to = getDotCenter(p.to)
       if (!from || !to) return null
       const t = Math.min(p.progress, 1)
-      const x = from.x + (to.x - from.x) * t - 6
-      const y = from.y + (to.y - from.y) * t - 6
+      const x = from.x + (to.x - from.x) * t - 4
+      const y = from.y + (to.y - from.y) * t - 4
       const colorMap = { red: '#ef4444', green: '#22c55e', blue: '#3b82f6' }
       return (
-        <circle
+        <rect
           key={p.id}
-          cx={x + 6}
-          cy={y + 6}
-          r="6"
+          x={x}
+          y={y}
+          width="8"
+          height="8"
           fill={colorMap[p.color]}
+          rx="2"
           opacity="0.9"
         />
       )
@@ -900,7 +914,12 @@ const Level2Page: React.FC<Level2PageProps> = ({ onBack }) => {
       )}
 
       {/* 隐藏关卡按钮 */}
-      <button className="hidden-level-btn" onClick={() => setShowHiddenLevel(true)} title="隐藏关卡">
+      <button 
+        className="hidden-level-btn" 
+        onClick={() => setShowHiddenLevel(true)} 
+        title="隐藏关卡"
+        disabled={testing}
+      >
         🔧
       </button>
 
@@ -912,6 +931,7 @@ const Level2Page: React.FC<Level2PageProps> = ({ onBack }) => {
           onSave={handleHiddenSave}
           initialParams={hiddenParams}
           currentColorMode={currentColorMode}
+          onCoinsUpdate={setCoins}
         />
       )}
     </div>
