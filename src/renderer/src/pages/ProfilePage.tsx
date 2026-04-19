@@ -62,16 +62,16 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
     completedLevels: 2,
     totalLevels: 8,
     achievements: [
-      { id: 1, name: '初出茅庐', desc: '完成第一个关卡', unlocked: true, icon: '🎯' },
-      { id: 2, name: '数据大师', desc: '完成所有数据相关关卡', unlocked: true, icon: '📊' },
-      { id: 3, name: '模型专家', desc: '完成所有模型关卡', unlocked: false, icon: '🧠' },
-      { id: 4, name: '完美主义者', desc: '所有关卡获得满分', unlocked: false, icon: '⭐' },
+      { id: 1, name: '初出茅庐', desc: '完成第一个关卡', unlocked: true, iconImg: 'achievement-1.png' },
+      { id: 2, name: '数据大师', desc: '完成所有数据相关关卡', unlocked: true, iconImg: 'achievement-2.png' },
+      { id: 3, name: '模型专家', desc: '完成所有模型关卡', unlocked: false, iconImg: 'achievement-3.png' },
+      { id: 4, name: '完美主义者', desc: '所有关卡获得满分', unlocked: false, iconImg: 'achievement-4.png' },
       { 
         id: 5, 
         name: '参数调优大师', 
         desc: '在教学关卡隐藏关卡中达到最高正确率（95%）', 
         unlocked: paramMasterUnlocked, 
-        icon: '🔬',
+        iconImg: 'achievement-5.png',
         hidden: false
       },
       { 
@@ -79,7 +79,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
         name: '专家系统调优师', 
         desc: '在第二关隐藏关卡中达到完美准确率（100%）', 
         unlocked: expertTunerUnlocked, 
-        icon: '⚙️',
+        iconImg: 'achievement-6.png',
         hidden: false
       },
       { 
@@ -87,7 +87,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
         name: '隐藏探索者', 
         desc: '完成所有隐藏关卡（3/3）', 
         unlocked: hiddenExplorerUnlocked, 
-        icon: '🕵️',
+        iconImg: 'achievement-7.png',
         hidden: true
       }
     ]
@@ -112,37 +112,26 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
         <button className="back-button" onClick={onBack}>
           ← 返回
         </button>
-        <h1 className="page-title">👤 个人中心</h1>
+        <h1 className="page-title">训练师档案</h1>
       </div>
 
       <div className="profile-content">
         <div className="profile-card">
           <div className="avatar">👨‍💻</div>
-          <h2 className="username">{userStats.name}</h2>
-          <div className="user-level">等级 {userStats.level}</div>
-        </div>
-
-        <div className="stats-card">
-          <h3 className="card-title">📈 学习进度</h3>
-          <div className="stat-item">
-            <span className="stat-label">经验值</span>
-            <span className="stat-value">{userStats.experience} XP</span>
+          <div className="user-info">
+            <h2 className="username">{userStats.name}</h2>
+            <div className="user-level">Lv.{userStats.level}</div>
           </div>
-          <div className="stat-item">
-            <span className="stat-label">完成关卡</span>
-            <span className="stat-value">
-              {userStats.completedLevels} / {userStats.totalLevels}
-            </span>
-          </div>
-          <div className="progress-bar">
-            <div
-              className="progress-fill"
-              style={{ width: `${(userStats.completedLevels / userStats.totalLevels) * 100}%` }}
-            ></div>
-          </div>
-          <div className="stat-item">
-            <span className="stat-label">当前积分</span>
-            <span className="stat-value">💰 {userStats.coins}</span>
+          <div className="stats-inline">
+            <div className="stat-item-inline">
+              <span className="stat-label">学习进度</span>
+              <span className="stat-value">{userStats.completedLevels}/{userStats.totalLevels}</span>
+            </div>
+            <div className="stat-divider">|</div>
+            <div className="stat-item-inline">
+              <span className="stat-label">当前积分</span>
+              <span className="stat-value">💰 {userStats.coins}</span>
+            </div>
           </div>
         </div>
 
@@ -154,7 +143,13 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
                 key={achievement.id}
                 className={`achievement-item ${achievement.unlocked ? 'unlocked' : 'locked'} ${achievement.hidden && !achievement.unlocked ? 'hidden-achievement' : ''}`}
               >
-                <div className="achievement-icon">{achievement.icon}</div>
+                <div className="achievement-icon">
+                  <img 
+                    src={new URL(`../assets/${achievement.iconImg}`, import.meta.url).href} 
+                    alt={achievement.name}
+                    className="achievement-icon-img"
+                  />
+                </div>
                 <div className="achievement-info">
                   <div className="achievement-name">
                     {achievement.hidden && !achievement.unlocked ? '???' : achievement.name}

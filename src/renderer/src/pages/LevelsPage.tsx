@@ -8,7 +8,7 @@ interface LevelsPageProps {
 
 const levels = [
   { id: 1, name: '教学关卡', desc: '从零开始，了解AI训练的基本概念', locked: false, tutorial: true },
-  { id: 2, name: '欠拟合', desc: '识别模型过于简单的问题', locked: false },
+  { id: 2, name: '专家系统', desc: '对数据进行清洗', locked: false },
   { id: 3, name: '过拟合', desc: '识别模型复杂度过高的问题', locked: false },
   { id: 4, name: '决策树', desc: '掌握树模型的分类逻辑', locked: false },
   { id: 5, name: '随机森林', desc: '理解集成学习的威力', locked: true },
