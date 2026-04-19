@@ -7,6 +7,7 @@ import balancerImg from '../../assets/level3-balancer.png'
 
 interface Level3PageProps {
   onBack: () => void
+  onNextLevel?: () => void
 }
 
 interface Point { x: number; y: number }
@@ -16,16 +17,51 @@ interface PlacedNode {
   type: 'balancer'
   pos: Point
   capacity: {
-    input: number  // 输入容量
-    output1: number  // 输出1容量
-    output2: number  // 输出2容量
+    input: number
+    output1: number
+    output2: number
   }
+}
+interface Particle {
+  id: number
+  color: string
+  from: string
+  to: string
+  progress: number
+  speed: number
+  done: boolean
 }
 
 const COINS_KEY = 'player_coins'
+const LEVEL3_REWARD_KEY = 'level3_reward_claimed'
+const LEVEL3_PASSED_KEY = 'level3_passed' // 新增：记录是否通过第三关
 
-const Level3Page: React.FC<Level3PageProps> = ({ onBack }) => {
-  const [coins] = useState(() => parseInt(localStorage.getItem(COINS_KEY) || '0'))
+const Level3Page: React.FC<Level3PageProps> = ({ onBack, onNextLevel }) => {
+  const [coins, setCoins] = useState(() => parseInt(localStorage.getItem(COINS_KEY) || '0'))
+  const rewardClaimed = React.useRef(!!localStorage.getItem(LEVEL3_REWARD_KEY))
+  const [levelPassed, setLevelPassed] = useState(() => !!localStorage.getItem(LEVEL3_PASSED_KEY))
+  
+  // 调试：打印初始状态
+  useEffect(() => {
+    console.log('Level3 初始化:', {
+      coins,
+      rewardClaimed: rewardClaimed.current,
+      localStorageKey: localStorage.getItem(LEVEL3_REWARD_KEY)
+    })
+    
+    // 开发模式：按Ctrl+R重置奖励状态
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.key === 'r') {
+        e.preventDefault()
+        localStorage.removeItem(LEVEL3_REWARD_KEY)
+        rewardClaimed.current = false
+        console.log('✅ Level3 奖励状态已重置')
+        alert('Level3 奖励状态已重置，可以重新测试')
+      }
+    }
+    window.addEventListener('keydown', handleKeyPress)
+    return () => window.removeEventListener('keydown', handleKeyPress)
+  }, [])
   const [infoModal, setInfoModal] = useState<'input' | 'output' | 'balancer' | null>(null)
   const [placedNodes, setPlacedNodes] = useState<PlacedNode[]>([])
   const [draggingNode, setDraggingNode] = useState<{ type: 'balancer'; mouseX: number; mouseY: number } | null>(null)
@@ -33,15 +69,32 @@ const Level3Page: React.FC<Level3PageProps> = ({ onBack }) => {
   const [isOverDeleteZone, setIsOverDeleteZone] = useState(false)
   const [connections, setConnections] = useState<Connection[]>([])
   const [draggingLine, setDraggingLine] = useState<{ fromId: string; mouse: Point } | null>(null)
+  const [testing, setTesting] = useState(false)
+  const [testParticles, setTestParticles] = useState<Particle[]>([])
+  const [targetProgress, setTargetProgress] = useState<number[]>([0, 0, 0, 0])
+  const [targetAccuracy, setTargetAccuracy] = useState<number[]>([0, 0, 0, 0])
+  const [elapsed, setElapsed] = useState(0)
+  const [showVictory, setShowVictory] = useState(false)
+  const [showReward, setShowReward] = useState(false)
   
   const dotRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const [, forceUpdate] = useState(0)
   const pageRef = useRef<HTMLDivElement>(null)
   const sidebarRef = useRef<HTMLDivElement>(null)
+  const animFrameRef = useRef<number | null>(null)
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const nodeStateRef = useRef<Record<string, { queue: number[]; processing: boolean; nextOutput: 1 | 2 }>>({})
 
   useEffect(() => {
     const timer = setTimeout(() => forceUpdate(n => n + 1), 100)
     return () => clearTimeout(timer)
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current)
+      if (timerRef.current) clearInterval(timerRef.current)
+    }
   }, [])
 
   const setDotRef = (id: string) => (el: HTMLDivElement | null) => {
@@ -78,7 +131,7 @@ const Level3Page: React.FC<Level3PageProps> = ({ onBack }) => {
     
     // input-out 只能连到节点的 -in 或 target-in
     // 节点的 -out1/-out2 只能连到其他节点的 -in 或 target-in
-    // 每个输出点只能连一条线
+    // 每个输出点只能发出一条线，但每个输入点可以接收多条线
     if (from === 'input-out' && (id.endsWith('-in') || toParts[0].startsWith('target'))) {
       setConnections(prev => [...prev.filter(c => c.from !== from), { from, to: id }])
     } else if (fromParts[fromParts.length - 1].startsWith('out') && (id.endsWith('-in') || toParts[0].startsWith('target'))) {
@@ -88,6 +141,28 @@ const Level3Page: React.FC<Level3PageProps> = ({ onBack }) => {
     setDraggingLine(null)
   }
 
+  const handleDeleteConnection = (index: number, e: React.MouseEvent) => {
+    const clickX = e.clientX
+    const clickY = e.clientY
+    const conn = connections[index]
+    
+    // 获取连接线两端点的位置
+    const from = getDotCenter(conn.from)
+    const to = getDotCenter(conn.to)
+    if (!from || !to) return
+    
+    // 计算点击位置到两端点的距离
+    const distToFrom = Math.sqrt(Math.pow(clickX - from.x, 2) + Math.pow(clickY - from.y, 2))
+    const distToTo = Math.sqrt(Math.pow(clickX - to.x, 2) + Math.pow(clickY - to.y, 2))
+    
+    // 如果点击位置距离任一端点小于30px，则不删除（保护连接点附近区域）
+    if (distToFrom < 30 || distToTo < 30) {
+      return
+    }
+    
+    setConnections(prev => prev.filter((_, i) => i !== index))
+  }
+
   const renderLines = (): JSX.Element[] => {
     return connections.map((conn, i) => {
       const from = getDotCenter(conn.from)
@@ -95,6 +170,22 @@ const Level3Page: React.FC<Level3PageProps> = ({ onBack }) => {
       if (!from || !to) return <g key={i} />
       return (
         <g key={i}>
+          {/* 透明的粗线用于点击检测 */}
+          <line
+            x1={from.x}
+            y1={from.y}
+            x2={to.x}
+            y2={to.y}
+            stroke="transparent"
+            strokeWidth="12"
+            strokeLinecap="round"
+            style={{ 
+              cursor: 'pointer', 
+              pointerEvents: draggingLine ? 'none' : 'stroke'  // 拖动时禁用点击
+            }}
+            onClick={(e) => handleDeleteConnection(i, e)}
+          />
+          {/* 可见的细线 */}
           <line
             x1={from.x}
             y1={from.y}
@@ -103,6 +194,7 @@ const Level3Page: React.FC<Level3PageProps> = ({ onBack }) => {
             stroke="#4ade80"
             strokeWidth="2.5"
             strokeLinecap="round"
+            style={{ pointerEvents: 'none' }}
           />
         </g>
       )
@@ -205,6 +297,249 @@ const Level3Page: React.FC<Level3PageProps> = ({ onBack }) => {
     setPlacedNodes(prev => prev.filter(n => n.id !== nodeId))
   }
 
+  const handleTest = () => {
+    if (testing) return
+    setTesting(true)
+    setTargetProgress([0, 0, 0, 0])
+    setTargetAccuracy([0, 0, 0, 0])
+    setElapsed(0)
+    
+    // 初始化节点状态
+    const nodeStates: Record<string, { queue: number[]; processing: boolean; nextOutput: 1 | 2 }> = {}
+    placedNodes.forEach(node => {
+      nodeStates[node.id] = { queue: [], processing: false, nextOutput: 1 }
+    })
+    nodeStateRef.current = nodeStates
+    
+    // 初始化目标统计
+    const targetStats = {
+      0: { total: 0, correct: 0 },
+      1: { total: 0, correct: 0 },
+      2: { total: 0, correct: 0 },
+      3: { total: 0, correct: 0 }
+    }
+    
+    // 启动计时器
+    timerRef.current = setInterval(() => setElapsed(e => e + 1), 1000)
+    
+    // 创建50个红色方块
+    const particles: Particle[] = []
+    let particleId = 0
+    
+    // 从input-out开始的连接
+    const inputConn = connections.find(c => c.from === 'input-out')
+    if (inputConn) {
+      for (let i = 0; i < 50; i++) {
+        particles.push({
+          id: particleId++,
+          color: '#ef4444',
+          from: inputConn.from,
+          to: inputConn.to,
+          progress: -(i * 0.08), // 间隔发送
+          speed: 0.003,
+          done: false
+        })
+      }
+    }
+    
+    setTestParticles(particles)
+    
+    // 动画循环
+    const animate = () => {
+      setTestParticles(prev => {
+        const next = [...prev]
+        let hasChanges = false
+        
+        // 更新所有粒子
+        for (let i = 0; i < next.length; i++) {
+          const p = next[i]
+          if (p.done) continue
+          
+          // 移动粒子
+          if (p.progress < 1) {
+            p.progress += p.speed
+            hasChanges = true
+          }
+          
+          // 粒子到达终点
+          if (p.progress >= 1 && !p.done) {
+            p.done = true
+            hasChanges = true
+            
+            // 检查是否到达目标
+            const targetMatch = p.to.match(/^target(\d+)-in$/)
+            if (targetMatch) {
+              const targetIdx = parseInt(targetMatch[1]) - 1
+              
+              // 更新统计
+              targetStats[targetIdx].total++
+              if (p.color === '#ef4444') {
+                targetStats[targetIdx].correct++
+              }
+              
+              // 更新进度
+              setTargetProgress(prev => {
+                const newProgress = [...prev]
+                newProgress[targetIdx] = targetStats[targetIdx].total
+                return newProgress
+              })
+              
+              // 更新准确率
+              setTargetAccuracy(prev => {
+                const newAccuracy = [...prev]
+                const stats = targetStats[targetIdx]
+                newAccuracy[targetIdx] = stats.total > 0 ? (stats.correct / stats.total) * 100 : 0
+                return newAccuracy
+              })
+              
+              // 实时检查通关条件：所有4个目标都有至少8个方块且准确率100%
+              const allTargetsComplete = Object.values(targetStats).every(s => s.total >= 8 && (s.correct / s.total) === 1)
+              
+              if (allTargetsComplete) {
+                console.log('Level3 通关！', { 
+                  rewardClaimed: rewardClaimed.current,
+                  targetStats 
+                })
+                
+                // 立即停止测试
+                if (timerRef.current) {
+                  clearInterval(timerRef.current)
+                  timerRef.current = null
+                }
+                
+                // 先更新状态
+                setTesting(false)
+                
+                // 发放金币奖励
+                // 注释掉"只能一次"的检查，用于测试
+                // if (!rewardClaimed.current) {
+                  if (!rewardClaimed.current) {
+                    rewardClaimed.current = true
+                    localStorage.setItem(LEVEL3_REWARD_KEY, '1')
+                    const newCoins = parseInt(localStorage.getItem(COINS_KEY) || '0') + 150
+                    localStorage.setItem(COINS_KEY, String(newCoins))
+                    setCoins(newCoins)
+                  }
+                  
+                  // 标记关卡已通过
+                  if (!levelPassed) {
+                    localStorage.setItem(LEVEL3_PASSED_KEY, '1')
+                    setLevelPassed(true)
+                  }
+                  
+                  console.log('Level3 显示奖励弹窗')
+                  
+                  // 使用setTimeout确保状态更新后再显示奖励
+                  setTimeout(() => {
+                    setShowVictory(true)
+                    setShowReward(true)
+                    console.log('Level3 奖励状态已设置')
+                    setTimeout(() => setShowReward(false), 3000)
+                  }, 100)
+                // }
+                
+                // 标记所有粒子为完成，并返回空数组
+                return []
+              }
+            } else if (p.to.endsWith('-in')) {
+              // 到达节点输入
+              const nodeId = p.to.replace('-in', '')
+              const nodeState = nodeStateRef.current[nodeId]
+              
+              if (nodeState) {
+                nodeState.queue.push(p.id)
+                
+                // 如果节点未在处理，开始处理
+                if (!nodeState.processing && nodeState.queue.length > 0) {
+                  nodeState.processing = true
+                  
+                  // 平衡器延迟10ms
+                  setTimeout(() => {
+                    if (nodeState.queue.length > 0) {
+                      nodeState.queue.shift()
+                      
+                      // 轮询输出
+                      const outputNum = nodeState.nextOutput
+                      nodeState.nextOutput = outputNum === 1 ? 2 : 1
+                      
+                      // 找到输出连接
+                      const outputConn = connections.find(c => c.from === `${nodeId}-out${outputNum}`)
+                      if (outputConn) {
+                        setTestParticles(current => [
+                          ...current,
+                          {
+                            id: particleId++,
+                            color: '#ef4444',
+                            from: outputConn.from,
+                            to: outputConn.to,
+                            progress: 0,
+                            speed: 0.003,
+                            done: false
+                          }
+                        ])
+                      }
+                      
+                      nodeState.processing = false
+                      
+                      // 继续处理队列
+                      if (nodeState.queue.length > 0) {
+                        setTimeout(() => animate(), 0)
+                      }
+                    }
+                  }, 10)
+                }
+              }
+            }
+          }
+        }
+        
+        // 检查是否全部完成或超时
+        const allParticlesDone = next.every(p => p.done)
+        const allQueuesEmpty = Object.values(nodeStateRef.current).every(s => s.queue.length === 0 && !s.processing)
+        
+        if ((allParticlesDone && allQueuesEmpty) || elapsed >= 40) {
+          setTesting(false)
+          if (timerRef.current) clearInterval(timerRef.current)
+          
+          // 检查是否超时
+          if (elapsed >= 40) {
+            alert('超时失败！')
+          } else {
+            // 所有粒子完成但未通关（通关成功已在实时检查中处理）
+            const allTargetsComplete = Object.values(targetStats).every(s => s.total >= 8 && (s.correct / s.total) === 1)
+            if (!allTargetsComplete) {
+              alert('未达到通关条件！')
+            }
+          }
+          
+          return next
+        }
+        
+        // 只有在没有通关的情况下才继续动画
+        if (next.length > 0 && (hasChanges || !allParticlesDone || !allQueuesEmpty)) {
+          animFrameRef.current = requestAnimationFrame(animate)
+        }
+        
+        return next
+      })
+    }
+    
+    animFrameRef.current = requestAnimationFrame(animate)
+  }
+
+  const renderTestParticles = () => {
+    return testParticles.map(p => {
+      if (p.progress < 0 || p.done) return null
+      const from = getDotCenter(p.from)
+      const to = getDotCenter(p.to)
+      if (!from || !to) return null
+      const t = Math.min(Math.max(p.progress, 0), 1)
+      const x = from.x + (to.x - from.x) * t - 4
+      const y = from.y + (to.y - from.y) * t - 4
+      return <rect key={p.id} x={x} y={y} width="8" height="8" fill={p.color} rx="2" opacity="0.9" />
+    })
+  }
+
   const particles = React.useMemo(() => {
     const binaries = ['0', '1', '01', '10', '001', '101', '110', '011', '100', '111']
     return Array.from({ length: 15 }, (_, i) => ({
@@ -240,6 +575,7 @@ const Level3Page: React.FC<Level3PageProps> = ({ onBack }) => {
         }}
       >
         {renderLines()}
+        {renderTestParticles()}
         {renderDraggingLine()}
       </svg>
       
@@ -264,6 +600,40 @@ const Level3Page: React.FC<Level3PageProps> = ({ onBack }) => {
       
       <div className="node-counter">{placedNodes.length}/3</div>
       <div className="coins-display">🪙 {coins}</div>
+
+      {/* 奖励弹窗 */}
+      {showReward && (
+        <div className="reward-popup">
+          <div className="reward-icon">🎉</div>
+          <div className="reward-text">第三关完成！</div>
+          <div className="reward-coins">+150 🪙</div>
+        </div>
+      )}
+
+      {/* 下一关按钮 - 通关后一直显示 */}
+      {levelPassed && onNextLevel && (
+        <button className="next-level-btn" onClick={onNextLevel}>
+          下一关 →
+        </button>
+      )}
+
+      {/* 计时器 */}
+      {(testing || elapsed > 0) && (
+        <div style={{
+          position: 'fixed',
+          top: '20px',
+          right: '350px',
+          background: 'rgba(0, 0, 0, 0.7)',
+          color: '#fff',
+          padding: '8px 16px',
+          borderRadius: '8px',
+          fontSize: '18px',
+          fontWeight: 'bold',
+          zIndex: 100
+        }}>
+          ⏱ {Math.floor(elapsed / 60).toString().padStart(2, '0')}:{(elapsed % 60).toString().padStart(2, '0')} / 00:40
+        </div>
+      )}
 
       <div className="left-panel">
         <div className="img-with-dot">
@@ -295,16 +665,16 @@ const Level3Page: React.FC<Level3PageProps> = ({ onBack }) => {
               <div className="target-bar-item">
                 <span className="bar-label-small">数量</span>
                 <div className="bar-track-small">
-                  <div className="bar-fill-small bar-green" style={{ height: '0%' }} />
+                  <div className="bar-fill-small bar-green" style={{ height: `${(targetProgress[0] / 8) * 100}%` }} />
                 </div>
-                <span className="bar-value-small">0/8</span>
+                <span className="bar-value-small">{targetProgress[0]}/8</span>
               </div>
               <div className="target-bar-item">
                 <span className="bar-label-small">准确率</span>
                 <div className="bar-track-small">
-                  <div className="bar-fill-small bar-blue" style={{ height: '0%' }} />
+                  <div className="bar-fill-small bar-blue" style={{ height: `${targetAccuracy[0]}%` }} />
                 </div>
-                <span className="bar-value-small">0%</span>
+                <span className="bar-value-small">{targetAccuracy[0].toFixed(0)}%</span>
               </div>
             </div>
           </div>
@@ -323,16 +693,16 @@ const Level3Page: React.FC<Level3PageProps> = ({ onBack }) => {
               <div className="target-bar-item">
                 <span className="bar-label-small">数量</span>
                 <div className="bar-track-small">
-                  <div className="bar-fill-small bar-green" style={{ height: '0%' }} />
+                  <div className="bar-fill-small bar-green" style={{ height: `${(targetProgress[1] / 8) * 100}%` }} />
                 </div>
-                <span className="bar-value-small">0/8</span>
+                <span className="bar-value-small">{targetProgress[1]}/8</span>
               </div>
               <div className="target-bar-item">
                 <span className="bar-label-small">准确率</span>
                 <div className="bar-track-small">
-                  <div className="bar-fill-small bar-blue" style={{ height: '0%' }} />
+                  <div className="bar-fill-small bar-blue" style={{ height: `${targetAccuracy[1]}%` }} />
                 </div>
-                <span className="bar-value-small">0%</span>
+                <span className="bar-value-small">{targetAccuracy[1].toFixed(0)}%</span>
               </div>
             </div>
           </div>
@@ -351,16 +721,16 @@ const Level3Page: React.FC<Level3PageProps> = ({ onBack }) => {
               <div className="target-bar-item">
                 <span className="bar-label-small">数量</span>
                 <div className="bar-track-small">
-                  <div className="bar-fill-small bar-green" style={{ height: '0%' }} />
+                  <div className="bar-fill-small bar-green" style={{ height: `${(targetProgress[2] / 8) * 100}%` }} />
                 </div>
-                <span className="bar-value-small">0/8</span>
+                <span className="bar-value-small">{targetProgress[2]}/8</span>
               </div>
               <div className="target-bar-item">
                 <span className="bar-label-small">准确率</span>
                 <div className="bar-track-small">
-                  <div className="bar-fill-small bar-blue" style={{ height: '0%' }} />
+                  <div className="bar-fill-small bar-blue" style={{ height: `${targetAccuracy[2]}%` }} />
                 </div>
-                <span className="bar-value-small">0%</span>
+                <span className="bar-value-small">{targetAccuracy[2].toFixed(0)}%</span>
               </div>
             </div>
           </div>
@@ -379,16 +749,16 @@ const Level3Page: React.FC<Level3PageProps> = ({ onBack }) => {
               <div className="target-bar-item">
                 <span className="bar-label-small">数量</span>
                 <div className="bar-track-small">
-                  <div className="bar-fill-small bar-green" style={{ height: '0%' }} />
+                  <div className="bar-fill-small bar-green" style={{ height: `${(targetProgress[3] / 8) * 100}%` }} />
                 </div>
-                <span className="bar-value-small">0/8</span>
+                <span className="bar-value-small">{targetProgress[3]}/8</span>
               </div>
               <div className="target-bar-item">
                 <span className="bar-label-small">准确率</span>
                 <div className="bar-track-small">
-                  <div className="bar-fill-small bar-blue" style={{ height: '0%' }} />
+                  <div className="bar-fill-small bar-blue" style={{ height: `${targetAccuracy[3]}%` }} />
                 </div>
-                <span className="bar-value-small">0%</span>
+                <span className="bar-value-small">{targetAccuracy[3].toFixed(0)}%</span>
               </div>
             </div>
           </div>
@@ -486,14 +856,14 @@ const Level3Page: React.FC<Level3PageProps> = ({ onBack }) => {
             )}
           </div>
 
-          {/* 输出连接点1 (上) */}
+          {/* 输出连接点1 (上) - 对齐图片上的绿点 */}
           <div
             ref={setDotRef(`${node.id}-out1`)}
             className="dot dot-right"
             style={{
               position: 'absolute',
               right: '-8px',
-              top: '35%',
+              top: '38%',
               transform: 'translateY(-50%)',
               zIndex: 20
             }}
@@ -501,14 +871,15 @@ const Level3Page: React.FC<Level3PageProps> = ({ onBack }) => {
             onMouseUp={(e) => onDotMouseUp(e, `${node.id}-out1`)}
           />
 
-          {/* 输出连接点2 (下) */}
+          {/* 输出连接点2 (下) - 对齐图片上的绿点 */}
           <div
             ref={setDotRef(`${node.id}-out2`)}
             className="dot dot-right"
             style={{
               position: 'absolute',
               right: '-8px',
-              bottom: '10px',
+              top: '80%',
+              transform: 'translateY(-50%)',
               zIndex: 20
             }}
             onMouseDown={(e) => onDotMouseDown(e, `${node.id}-out2`)}
@@ -543,7 +914,9 @@ const Level3Page: React.FC<Level3PageProps> = ({ onBack }) => {
         }}
       >
         <div className="sidebar-actions">
-          <button className="sidebar-btn test-btn">测试</button>
+          <button className="sidebar-btn test-btn" onClick={handleTest} disabled={testing}>
+            {testing ? '测试中...' : '测试'}
+          </button>
           <button className="sidebar-btn save-btn">保存</button>
         </div>
         <div className="sidebar-content">
