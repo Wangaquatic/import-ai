@@ -64,8 +64,8 @@ function AppContent(): React.JSX.Element {
         {currentPage === 'levels' && <LevelsPage onBack={goHome} onNavigate={navigateTo} />}
         {currentPage === 'tutorial' && <TutorialPage onBack={() => navigateTo('levels')} onNextLevel={() => navigateTo('level2')} />}
         {currentPage === 'level2' && <Level2Page onBack={() => navigateTo('levels')} />}
-        {currentPage === 'level3' && <Level3Page onBack={() => navigateTo('levels')} />}
-        {currentPage === 'level4' && <Level4Page onBack={() => navigateTo('levels')} />}
+        {currentPage === 'level3' && <Level3Page onBack={() => navigateTo('levels')} onNextLevel={() => navigateTo('level4')} />}
+        {currentPage === 'level4' && <Level4Page onBack={() => navigateTo('levels')} onNextLevel={() => navigateTo('levels')} />}
         {currentPage === 'shop' && <ShopPage onBack={goHome} />}
         {currentPage === 'profile' && <ProfilePage onBack={goHome} />}
       </div>

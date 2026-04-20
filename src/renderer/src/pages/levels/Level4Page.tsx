@@ -18,11 +18,8 @@ interface PlacedNode {
   id: string
   type: 'balancer' | 'classifier' | 'trash'
   pos: Point
-  capacity: {
-    input: number
-    output1?: number
-    output2?: number
-  }
+  maxCapacity: number // 最大容量
+  currentLoad: number // 当前负载
 }
 interface Particle {
   id: number
@@ -48,7 +45,10 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel }) => {
     console.log('Level4 初始化:', {
       coins,
       rewardClaimed: rewardClaimed.current,
-      localStorageKey: localStorage.getItem(LEVEL4_REWARD_KEY)
+      levelPassed: levelPassed,
+      rewardKey: localStorage.getItem(LEVEL4_REWARD_KEY),
+      passedKey: localStorage.getItem(LEVEL4_PASSED_KEY),
+      onNextLevel: !!onNextLevel
     })
     
     // 开发模式：按Ctrl+R重置奖励状态
@@ -78,6 +78,8 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel }) => {
   const [elapsed, setElapsed] = useState(0)
   const [showVictory, setShowVictory] = useState(false)
   const [showReward, setShowReward] = useState(false)
+  const [speedMultiplier, setSpeedMultiplier] = useState(1.0)
+  const [showTimeout, setShowTimeout] = useState(false)
   
   const dotRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const [, forceUpdate] = useState(0)
@@ -86,6 +88,10 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel }) => {
   const animFrameRef = useRef<number | null>(null)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const nodeStateRef = useRef<Record<string, { queue: Array<{id: number, color: string}>; processing: boolean; nextOutput: 1 | 2 }>>({})
+  const speedMultiplierRef = useRef(1.0)
+  const elapsedRef = useRef(0)
+  const colorQueueRef = useRef<{ colors: string[]; index: number }>({ colors: [], index: 0 })
+  const particleIdRef = useRef(0)
 
   useEffect(() => {
     const timer = setTimeout(() => forceUpdate(n => n + 1), 100)
@@ -275,9 +281,8 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel }) => {
             id: `${draggingNode.type}-${Date.now()}`,
             type: draggingNode.type,
             pos: { x, y },
-            capacity: draggingNode.type === 'trash' 
-              ? { input: 0 }
-              : { input: 0, output1: 0, output2: 0 }
+            maxCapacity: draggingNode.type === 'trash' ? 10 : 5, // 垃圾桶容量10，其他5
+            currentLoad: 0
           }
           setPlacedNodes([...placedNodes, newNode])
         }
@@ -313,8 +318,31 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel }) => {
     setPlacedNodes(prev => prev.filter(n => n.id !== nodeId))
   }
 
+  const handleSpeedChange = () => {
+    const speeds = [1.0, 2.0, 3.0]
+    const idx = speeds.indexOf(speedMultiplier)
+    const next = speeds[(idx + 1) % speeds.length]
+    setSpeedMultiplier(next)
+    speedMultiplierRef.current = next
+  }
+
   const handleTest = () => {
-    if (testing) return
+    if (testing) {
+      // 停止测试
+      setTesting(false)
+      if (animFrameRef.current) {
+        cancelAnimationFrame(animFrameRef.current)
+        animFrameRef.current = null
+      }
+      if (timerRef.current) {
+        clearInterval(timerRef.current)
+        timerRef.current = null
+      }
+      setTestParticles([])
+      return
+    }
+    
+    // 开始测试
     setTesting(true)
     setTargetCount(0)
     setTargetAccuracy(0)
@@ -327,12 +355,16 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel }) => {
     })
     nodeStateRef.current = nodeStates
     
-    // 启动计时器
-    timerRef.current = setInterval(() => setElapsed(e => e + 1), 1000)
+    // 启动计时器（显示真实经过的秒数）
+    elapsedRef.current = 0
+    timerRef.current = setInterval(() => {
+      elapsedRef.current += 1
+      setElapsed(elapsedRef.current)
+    }, 1000)
     
     // 创建500红+500蓝方块
     const particles: Particle[] = []
-    let particleId = 0
+    particleIdRef.current = 0
     const colors = [...Array(500).fill('#ef4444'), ...Array(500).fill('#3b82f6')]
     // 随机打乱
     for (let i = colors.length - 1; i > 0; i--) {
@@ -340,20 +372,25 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel }) => {
       [colors[i], colors[j]] = [colors[j], colors[i]]
     }
     
+    // 保存颜色数组到ref供后续使用
+    colorQueueRef.current = { colors, index: 0 }
+    
     // 从input-out开始的连接
     const inputConn = connections.find(c => c.from === 'input-out')
     if (inputConn) {
-      for (let i = 0; i < 1000; i++) {
+      // 初始只创建前15个粒子，间隔发送
+      for (let i = 0; i < Math.min(15, colors.length); i++) {
         particles.push({
-          id: particleId++,
+          id: particleIdRef.current++,
           color: colors[i],
           from: inputConn.from,
           to: inputConn.to,
-          progress: -(i * 0.01),
-          speed: 0.004,
+          progress: -(i * 0.15), // 较大的间隔
+          speed: 0.004, // 基础速度，不预乘倍速
           done: false
         })
       }
+      colorQueueRef.current.index = Math.min(15, colors.length)
     }
     
     setTestParticles(particles)
@@ -367,14 +404,51 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel }) => {
         const next = [...prev]
         let hasChanges = false
         
+        // 检查是否需要从输入流补充新粒子
+        const inputConn = connections.find(c => c.from === 'input-out')
+        if (inputConn && colorQueueRef.current.index < colorQueueRef.current.colors.length) {
+          // 检查当前从input-out出发且未完成的粒子数量
+          const inputParticles = next.filter(p => p.from === 'input-out' && !p.done && p.progress < 1)
+          // 如果少于8个，补充新粒子（一次只补充1-2个，保持稳定流速）
+          if (inputParticles.length < 8) {
+            const toAdd = Math.min(2, colorQueueRef.current.colors.length - colorQueueRef.current.index)
+            for (let i = 0; i < toAdd; i++) {
+              next.push({
+                id: particleIdRef.current++,
+                color: colorQueueRef.current.colors[colorQueueRef.current.index++],
+                from: inputConn.from,
+                to: inputConn.to,
+                progress: -0.2, // 从较远的位置开始
+                speed: 0.004, // 基础速度，不预乘倍速
+                done: false
+              })
+            }
+            hasChanges = true
+          }
+        }
+        
         // 更新所有粒子
         for (let i = 0; i < next.length; i++) {
           const p = next[i]
           if (p.done) continue
           
-          // 移动粒子
-          if (p.progress < 1) {
-            p.progress += p.speed
+          // 检查粒子是否被阻塞
+          let isBlocked = false
+          if (p.progress >= 0.95 && p.progress < 1 && p.to.endsWith('-in')) {
+            const nodeId = p.to.replace('-in', '')
+            const nodeState = nodeStateRef.current[nodeId]
+            const node = placedNodes.find(n => n.id === nodeId)
+            if (node && nodeState && node.type !== 'trash') {
+              // 如果节点队列已满，粒子保持阻塞
+              if (nodeState.queue.length >= node.maxCapacity) {
+                isBlocked = true
+              }
+            }
+          }
+          
+          // 移动粒子（使用当前倍速）
+          if (p.progress < 1 && !isBlocked) {
+            p.progress += p.speed * speedMultiplierRef.current
             hasChanges = true
           }
           
@@ -390,10 +464,10 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel }) => {
               setTargetCount(statsRef.totalCount)
               setTargetAccuracy(statsRef.totalCount > 0 ? (statsRef.redCount / statsRef.totalCount) * 100 : 0)
               
-              // 实时检查通关条件：300个方块，75%准确率
+              // 实时检查通关条件：100个方块，75%准确率
               const accuracy = statsRef.totalCount > 0 ? statsRef.redCount / statsRef.totalCount : 0
               
-              if (statsRef.totalCount >= 300 && accuracy >= 0.75) {
+              if (statsRef.totalCount >= 100 && accuracy >= 0.75) {
                 console.log('Level4 通关！', { 
                   totalCount: statsRef.totalCount,
                   redCount: statsRef.redCount,
@@ -453,85 +527,107 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel }) => {
                   continue
                 }
                 
-                nodeState.queue.push({ id: p.id, color: p.color })
-                
-                // 如果节点未在处理，开始处理
-                if (!nodeState.processing && nodeState.queue.length > 0) {
-                  nodeState.processing = true
+                // 检查节点容量，如果已满则不添加
+                if (nodeState.queue.length < node.maxCapacity) {
+                  nodeState.queue.push({ id: p.id, color: p.color })
                   
-                  // 分类器延迟100ms，平衡器延迟10ms
-                  const delay = node.type === 'classifier' ? 100 : 10
+                  // 更新节点负载显示
+                  setPlacedNodes(prev => prev.map(n => 
+                    n.id === nodeId ? { ...n, currentLoad: nodeState.queue.length } : n
+                  ))
                   
-                  setTimeout(() => {
-                    if (nodeState.queue.length > 0) {
-                      const item = nodeState.queue.shift()!
-                      
-                      let outputNum: 1 | 2
-                      if (node.type === 'classifier') {
-                        // 分类器：红色走output1，蓝色走output2
-                        outputNum = item.color === '#ef4444' ? 1 : 2
-                      } else {
-                        // 平衡器：轮询
-                        outputNum = nodeState.nextOutput
-                        nodeState.nextOutput = outputNum === 1 ? 2 : 1
-                      }
-                      
-                      // 找到输出连接
-                      const outputConn = connections.find(c => c.from === `${nodeId}-out${outputNum}`)
-                      if (outputConn) {
-                        setTestParticles(current => [
-                          ...current,
-                          {
-                            id: particleId++,
-                            color: item.color,
-                            from: outputConn.from,
-                            to: outputConn.to,
-                            progress: 0,
-                            speed: 0.004,
-                            done: false
-                          }
-                        ])
-                      }
-                      
-                      nodeState.processing = false
-                      
-                      // 继续处理队列
+                  // 如果节点未在处理，开始处理
+                  if (!nodeState.processing && nodeState.queue.length > 0) {
+                    nodeState.processing = true
+                    
+                    // 分类器延迟500ms，平衡器延迟10ms
+                    const delay = node.type === 'classifier' ? 500 : 10
+                    
+                    const processQueue = () => {
                       if (nodeState.queue.length > 0) {
-                        setTimeout(() => animate(), 0)
+                        const item = nodeState.queue.shift()!
+                        
+                        // 更新节点负载显示
+                        setPlacedNodes(prev => prev.map(n => 
+                          n.id === nodeId ? { ...n, currentLoad: nodeState.queue.length } : n
+                        ))
+                        
+                        let outputNum: 1 | 2
+                        if (node.type === 'classifier') {
+                          // 分类器：红色走output1，蓝色走output2
+                          outputNum = item.color === '#ef4444' ? 1 : 2
+                        } else {
+                          // 平衡器：轮询
+                          outputNum = nodeState.nextOutput
+                          nodeState.nextOutput = outputNum === 1 ? 2 : 1
+                        }
+                        
+                        // 找到输出连接
+                        const outputConn = connections.find(c => c.from === `${nodeId}-out${outputNum}`)
+                        if (outputConn) {
+                          setTestParticles(current => [
+                            ...current,
+                            {
+                              id: particleIdRef.current++,
+                              color: item.color,
+                              from: outputConn.from,
+                              to: outputConn.to,
+                              progress: 0,
+                              speed: 0.004, // 基础速度，不预乘倍速
+                              done: false
+                            }
+                          ])
+                        }
+                        
+                        // 继续处理队列中的下一个
+                        if (nodeState.queue.length > 0) {
+                          setTimeout(processQueue, delay)
+                        } else {
+                          nodeState.processing = false
+                        }
+                      } else {
+                        nodeState.processing = false
                       }
                     }
-                  }, delay)
+                    
+                    setTimeout(processQueue, delay)
+                  }
+                } else {
+                  // 节点已满，粒子被阻塞，保持在输入端
+                  p.progress = 0.95 // 停在输入端附近，不标记为done
+                  hasChanges = true
                 }
               }
             }
           }
         }
         
-        // 检查是否全部完成或超时
+        // 检查是否全部完成或超时（时间限制根据倍速调整：倍速越大，时限越小）
+        // elapsed是真实秒数，elapsed * speedMultiplier 是加速后的等效时间
+        const timeLimit = 180
+        const effectiveElapsed = elapsedRef.current * speedMultiplierRef.current
         const allParticlesDone = next.every(p => p.done)
         const allQueuesEmpty = Object.values(nodeStateRef.current).every(s => s.queue.length === 0 && !s.processing)
         
-        if ((allParticlesDone && allQueuesEmpty) || elapsed >= 180) {
+        if ((allParticlesDone && allQueuesEmpty) || effectiveElapsed >= timeLimit) {
           setTesting(false)
           if (timerRef.current) clearInterval(timerRef.current)
           
           // 检查是否超时
-          if (elapsed >= 180) {
-            alert('超时失败！')
+          if (effectiveElapsed >= timeLimit) {
+            setShowTimeout(true)
           } else {
             // 所有粒子完成但未通关（通关成功已在实时检查中处理）
-            if (statsRef.totalCount < 300 || statsRef.redCount / statsRef.totalCount < 0.75) {
-              alert('未达到通关条件！')
+            if (statsRef.totalCount < 100 || statsRef.redCount / statsRef.totalCount < 0.75) {
+              setShowTimeout(true)
             }
           }
           
           return next
         }
         
-        // 只有在没有通关的情况下才继续动画
-        if (next.length > 0 && (hasChanges || !allParticlesDone || !allQueuesEmpty)) {
-          animFrameRef.current = requestAnimationFrame(animate)
-        }
+        // 继续动画循环
+        animFrameRef.current = requestAnimationFrame(animate)
         
         return next
       })
@@ -620,6 +716,25 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel }) => {
       <div className="node-counter">{getTotalNodes()}/8</div>
       <div className="coins-display">💰 {coins}</div>
 
+      {/* 速度控制按钮 */}
+      <button className="speed-btn" onClick={handleSpeedChange}>
+        ▶▶ {speedMultiplier.toFixed(1)}x
+      </button>
+
+      {/* 超时弹窗 */}
+      {showTimeout && (
+        <div className="timeout-overlay" onClick={() => setShowTimeout(false)}>
+          <div className="timeout-modal" onClick={e => e.stopPropagation()}>
+            <div className="timeout-icon">⏰</div>
+            <div className="timeout-title">超时了</div>
+            <div className="timeout-text">请重新尝试</div>
+            <button className="timeout-btn" onClick={() => setShowTimeout(false)}>
+              确定
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* 奖励弹窗 */}
       {showReward && (
         <div className="reward-popup">
@@ -630,6 +745,7 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel }) => {
       )}
 
       {/* 下一关按钮 - 通关后一直显示 */}
+      {console.log('Level4 按钮渲染检查:', { levelPassed, onNextLevel: !!onNextLevel, shouldShow: levelPassed && !!onNextLevel })}
       {levelPassed && onNextLevel && (
         <button className="next-level-btn" onClick={onNextLevel}>
           下一关 →
@@ -650,7 +766,7 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel }) => {
           fontWeight: 'bold',
           zIndex: 100
         }}>
-          ⏱ {Math.floor(elapsed / 60).toString().padStart(2, '0')}:{(elapsed % 60).toString().padStart(2, '0')} / 03:00
+          ⏱ {Math.floor(elapsed / 60).toString().padStart(2, '0')}:{(elapsed % 60).toString().padStart(2, '0')} / {Math.floor(180 / speedMultiplier / 60).toString().padStart(2, '0')}:{Math.floor(180 / speedMultiplier % 60).toString().padStart(2, '0')}
         </div>
       )}
 
@@ -684,9 +800,9 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel }) => {
               <div className="target-bar-item">
                 <span className="bar-label-small">数量</span>
                 <div className="bar-track-small">
-                  <div className="bar-fill-small bar-green" style={{ height: `${(targetCount / 300) * 100}%` }} />
+                  <div className="bar-fill-small bar-green" style={{ height: `${(targetCount / 100) * 100}%` }} />
                 </div>
-                <span className="bar-value-small">{targetCount}/300</span>
+                <span className="bar-value-small">{targetCount}/100</span>
               </div>
               <div className="target-bar-item">
                 <span className="bar-label-small">准确率</span>
@@ -736,7 +852,7 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel }) => {
             <img 
               src={getNodeImage(node.type)} 
               alt={node.type} 
-              style={{ width: '120px', borderRadius: '8px', userSelect: 'none', pointerEvents: 'none' }} 
+              style={{ width: '160px', borderRadius: '8px', userSelect: 'none', pointerEvents: 'none' }} 
               draggable={false} 
             />
 
@@ -752,7 +868,7 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel }) => {
               i
             </button>
 
-            {/* 容量显示 */}
+            {/* 处理时间显示 */}
             <div style={{
               position: 'absolute',
               top: '5px',
@@ -761,40 +877,39 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel }) => {
               borderRadius: '4px',
               padding: '2px 6px',
               fontSize: '10px',
-              color: '#fff',
+              color: '#fbbf24',
               fontWeight: 'bold',
               pointerEvents: 'none'
             }}>
-              {node.type === 'trash' 
-                ? `${node.capacity.input}`
-                : `${node.capacity.input}/${(node.capacity.output1 || 0) + (node.capacity.output2 || 0)}`
-              }
+              {node.type === 'classifier' ? '0.5s' : node.type === 'balancer' ? '10ms' : '-'}
             </div>
 
-            {/* 进度条 */}
-            {(node.capacity.input > 0 || (node.capacity.output1 || 0) > 0 || (node.capacity.output2 || 0) > 0) && (
+            {/* 进度条 - 横向显示在中间靠右 */}
+            {testing && (
               <div style={{
                 position: 'absolute',
-                bottom: '5px',
-                left: '5px',
-                right: '5px',
-                height: '4px',
+                right: '8px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                width: '40px',
+                height: '8px',
                 background: 'rgba(255, 255, 255, 0.2)',
-                borderRadius: '2px',
+                borderRadius: '4px',
                 overflow: 'hidden',
                 pointerEvents: 'none'
               }}>
                 <div style={{
                   height: '100%',
-                  background: node.type === 'classifier' 
-                    ? 'linear-gradient(to right, #60a5fa, #3b82f6)'
+                  width: `${(node.currentLoad / node.maxCapacity) * 100}%`,
+                  background: node.currentLoad >= node.maxCapacity 
+                    ? 'linear-gradient(to right, #ef4444, #fca5a5)' 
+                    : node.type === 'classifier'
+                    ? 'linear-gradient(to right, #60a5fa, #93c5fd)'
                     : node.type === 'trash'
-                    ? 'linear-gradient(to right, #ef4444, #dc2626)'
-                    : 'linear-gradient(to right, #4ade80, #22c55e)',
-                  width: node.type === 'trash'
-                    ? '100%'
-                    : `${Math.min(((node.capacity.output1 || 0) + (node.capacity.output2 || 0)) / Math.max(node.capacity.input, 1) * 100, 100)}%`,
-                  transition: 'width 0.3s ease'
+                    ? 'linear-gradient(to right, #f59e0b, #fbbf24)'
+                    : 'linear-gradient(to right, #4ade80, #86efac)',
+                  transition: 'width 0.2s ease',
+                  borderRadius: '4px'
                 }} />
               </div>
             )}
@@ -853,7 +968,7 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel }) => {
           <img 
             src={getNodeImage(draggingNode.type)} 
             alt={draggingNode.type} 
-            style={{ width: '120px', borderRadius: '8px', userSelect: 'none' }} 
+            style={{ width: '160px', borderRadius: '8px', userSelect: 'none' }} 
             draggable={false} 
           />
         </div>
@@ -868,8 +983,11 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel }) => {
         }}
       >
         <div className="sidebar-actions">
-          <button className="sidebar-btn test-btn" onClick={handleTest} disabled={testing}>
-            {testing ? '测试中...' : '测试'}
+          <button 
+            className={`sidebar-btn test-btn ${testing ? 'testing' : ''}`} 
+            onClick={handleTest}
+          >
+            {testing ? '停止' : '测试'}
           </button>
           <button className="sidebar-btn save-btn">保存</button>
         </div>
@@ -934,7 +1052,7 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel }) => {
                   {infoModal === 'input'
                     ? '这次输入包含500个红色方块和500个蓝色方块。你需要用分类器把红色方块筛选出来，然后送到目标。'
                     : infoModal === 'output'
-                    ? '输出目标需要收集300个方块，准确率要达到75%以上（至少225个红色方块）。在3分钟内完成即可获胜。'
+                    ? '输出目标需要收集100个方块，准确率要达到75%以上（至少75个红色方块）。在3分钟内完成即可获胜。'
                     : infoModal === 'balancer'
                     ? '平衡器有1个输入和2个输出。它会把收到的数据平均分配到两个输出端口，实现负载均衡。'
                     : infoModal === 'classifier'
@@ -949,7 +1067,7 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel }) => {
                   {infoModal === 'input'
                     ? '输入流包含1000个数据包（500红+500蓝）。你需要设计一个高效的分类和平衡网络来筛选红色包并达到目标节点数量限制和时间限制。'
                     : infoModal === 'output'
-                    ? '输出节点需要收集300个数据包，准确率≥75%。这是一个平衡吞吐量和准确性的挑战。你有180秒和最多8个节点的限制。'
+                    ? '输出节点需要收集100个数据包，准确率≥75%。这是一个平衡吞吐量和准确性的挑战。你有180秒和最多8个节点的限制。'
                     : infoModal === 'balancer'
                     ? '负载均衡器（Load Balancer）实现1:2的数据分流。采用轮询算法（Round-Robin），将输入流量均匀分配到两个输出通道，处理延迟0.01秒。'
                     : infoModal === 'classifier'
