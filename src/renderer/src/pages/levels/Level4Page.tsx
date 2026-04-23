@@ -6,6 +6,7 @@ import targetImg from '../../assets/target.jpg'
 import balancerImg from '../../assets/level3-balancer.png'
 import classifierImg from '../../assets/classifier.jpg'
 import trashImg from '../../assets/trash.png'
+import Level4HiddenModal from '../../components/Level4HiddenModal'
 
 interface Level4PageProps {
   onBack: () => void
@@ -39,6 +40,7 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel }) => {
   const [coins, setCoins] = useState(() => parseInt(localStorage.getItem(COINS_KEY) || '0'))
   const rewardClaimed = React.useRef(!!localStorage.getItem(LEVEL4_REWARD_KEY))
   const [levelPassed, setLevelPassed] = useState(() => !!localStorage.getItem(LEVEL4_PASSED_KEY))
+  const [showHiddenLevel, setShowHiddenLevel] = useState(false)
   
   // 调试：打印初始状态
   useEffect(() => {
@@ -324,6 +326,12 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel }) => {
     const next = speeds[(idx + 1) % speeds.length]
     setSpeedMultiplier(next)
     speedMultiplierRef.current = next
+  }
+
+  const handleClearAll = () => {
+    if (testing) return // 测试中不允许清除
+    setPlacedNodes([])
+    setConnections([])
   }
 
   const handleTest = () => {
@@ -713,12 +721,54 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel }) => {
 
       <button className="back-button" onClick={onBack}>← 返回</button>
       
+      {/* 隐藏关卡按钮 - 左下角 */}
+      <button className="hidden-level-btn" onClick={() => setShowHiddenLevel(true)} title="隐藏关卡">
+        🔬
+      </button>
+      
       <div className="node-counter">{getTotalNodes()}/8</div>
       <div className="coins-display">💰 {coins}</div>
 
       {/* 速度控制按钮 */}
       <button className="speed-btn" onClick={handleSpeedChange}>
         ▶▶ {speedMultiplier.toFixed(1)}x
+      </button>
+
+      {/* 清除按钮 */}
+      <button 
+        className="clear-all-btn" 
+        onClick={handleClearAll}
+        disabled={testing}
+        style={{
+          position: 'fixed',
+          bottom: '30px',
+          right: levelPassed && onNextLevel ? '200px' : '30px', // 如果有下一关按钮，则向左移动
+          padding: '12px 24px',
+          background: testing ? 'rgba(100, 100, 100, 0.5)' : 'rgba(239, 68, 68, 0.9)',
+          color: '#fff',
+          border: 'none',
+          borderRadius: '8px',
+          fontSize: '16px',
+          fontWeight: 'bold',
+          cursor: testing ? 'not-allowed' : 'pointer',
+          zIndex: 100,
+          transition: 'all 0.2s ease',
+          opacity: testing ? 0.5 : 1
+        }}
+        onMouseEnter={(e) => {
+          if (!testing) {
+            e.currentTarget.style.background = 'rgba(220, 38, 38, 0.9)'
+            e.currentTarget.style.transform = 'scale(1.05)'
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (!testing) {
+            e.currentTarget.style.background = 'rgba(239, 68, 68, 0.9)'
+            e.currentTarget.style.transform = 'scale(1)'
+          }
+        }}
+      >
+        🗑️ 清除全部
       </button>
 
       {/* 超时弹窗 */}
@@ -1079,6 +1129,11 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel }) => {
             <button className="info-close" onClick={() => setInfoModal(null)}>关闭</button>
           </div>
         </div>
+      )}
+      
+      {/* 隐藏关卡弹窗 */}
+      {showHiddenLevel && (
+        <Level4HiddenModal onClose={() => setShowHiddenLevel(false)} />
       )}
     </div>
   )

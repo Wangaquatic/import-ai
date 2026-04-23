@@ -310,6 +310,12 @@ const Level3Page: React.FC<Level3PageProps> = ({ onBack, onNextLevel }) => {
     speedMultiplierRef.current = next
   }
 
+  const handleClearAll = () => {
+    if (testing) return // 测试中不允许清除
+    setPlacedNodes([])
+    setConnections([])
+  }
+
   const handleTest = () => {
     if (testing) {
       // 停止测试
@@ -372,7 +378,7 @@ const Level3Page: React.FC<Level3PageProps> = ({ onBack, onNextLevel }) => {
           from: inputConn.from,
           to: inputConn.to,
           progress: -(i * 0.1), // 增加间隔
-          speed: 0.003, // 基础速度，不预乘倍速
+          speed: 0.008, // 基础速度，提高到0.008使流动更快
           done: false
         })
       }
@@ -402,7 +408,7 @@ const Level3Page: React.FC<Level3PageProps> = ({ onBack, onNextLevel }) => {
                 from: inputConn.from,
                 to: inputConn.to,
                 progress: -0.1,
-                speed: 0.003, // 基础速度，不预乘倍速
+                speed: 0.008, // 基础速度，提高到0.008使流动更快
                 done: false
               })
             }
@@ -560,7 +566,7 @@ const Level3Page: React.FC<Level3PageProps> = ({ onBack, onNextLevel }) => {
                               from: outputConn.from,
                               to: outputConn.to,
                               progress: 0,
-                              speed: 0.003, // 基础速度，不预乘倍速
+                              speed: 0.008, // 基础速度，提高到0.008使流动更快
                               done: false
                             }
                           ])
@@ -577,8 +583,8 @@ const Level3Page: React.FC<Level3PageProps> = ({ onBack, onNextLevel }) => {
                       }
                     }
                     
-                    // 平衡器延迟10ms
-                    setTimeout(processQueue, 10)
+                    // 平衡器延迟5ms（减少延迟使处理更快）
+                    setTimeout(processQueue, 5)
                   }
                 } else {
                   // 节点已满，粒子被阻塞，保持在输入端
@@ -702,6 +708,43 @@ const Level3Page: React.FC<Level3PageProps> = ({ onBack, onNextLevel }) => {
       {/* 速度控制按钮 */}
       <button className="speed-btn" onClick={handleSpeedChange}>
         ▶▶ {speedMultiplier.toFixed(1)}x
+      </button>
+
+      {/* 清除按钮 */}
+      <button 
+        className="clear-all-btn" 
+        onClick={handleClearAll}
+        disabled={testing}
+        style={{
+          position: 'fixed',
+          bottom: '30px',
+          right: levelPassed && onNextLevel ? '200px' : '30px', // 如果有下一关按钮，则向左移动
+          padding: '12px 24px',
+          background: testing ? 'rgba(100, 100, 100, 0.5)' : 'rgba(239, 68, 68, 0.9)',
+          color: '#fff',
+          border: 'none',
+          borderRadius: '8px',
+          fontSize: '16px',
+          fontWeight: 'bold',
+          cursor: testing ? 'not-allowed' : 'pointer',
+          zIndex: 100,
+          transition: 'all 0.2s ease',
+          opacity: testing ? 0.5 : 1
+        }}
+        onMouseEnter={(e) => {
+          if (!testing) {
+            e.currentTarget.style.background = 'rgba(220, 38, 38, 0.9)'
+            e.currentTarget.style.transform = 'scale(1.05)'
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (!testing) {
+            e.currentTarget.style.background = 'rgba(239, 68, 68, 0.9)'
+            e.currentTarget.style.transform = 'scale(1)'
+          }
+        }}
+      >
+        🗑️ 清除全部
       </button>
 
       {/* 超时弹窗 */}
@@ -948,7 +991,7 @@ const Level3Page: React.FC<Level3PageProps> = ({ onBack, onNextLevel }) => {
               fontWeight: 'bold',
               pointerEvents: 'none'
             }}>
-              10ms
+              5ms
             </div>
 
             {/* 进度条 - 横向显示在中间靠右 */}
