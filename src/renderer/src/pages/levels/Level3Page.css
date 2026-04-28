@@ -1,0 +1,322 @@
+/* Level3 教程动画样式 */
+.level3-tutorial-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.level3-tutorial-content {
+  position: relative;
+  width: 600px;
+  height: 400px;
+}
+
+/* 步骤1: 数据流 */
+.level3-tutorial-stream {
+  position: absolute;
+  left: 50px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.level3-tutorial-line {
+  width: 200px;
+  height: 4px;
+  background: linear-gradient(to right, #4ade80, #22c55e);
+  border-radius: 2px;
+  box-shadow: 0 0 10px rgba(74, 222, 128, 0.5);
+}
+
+.level3-tutorial-data-flow {
+  position: absolute;
+  top: -4px;
+  left: 0;
+  width: 200px;
+  height: 12px;
+}
+
+.level3-tutorial-particle {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: #ef4444;
+  border-radius: 2px;
+  animation: level3-flowRight 2s linear infinite;
+}
+
+@keyframes level3-flowRight {
+  0% {
+    left: 0;
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    left: 200px;
+    opacity: 0;
+  }
+}
+
+/* 步骤2: 分叉失败 */
+.level3-tutorial-fork-attempt {
+  position: absolute;
+  left: 250px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.level3-tutorial-line.fork-top {
+  width: 150px;
+  height: 4px;
+  background: linear-gradient(to right, #22c55e, #ef4444);
+  border-radius: 2px;
+  transform: rotate(-20deg);
+  transform-origin: left center;
+  animation: level3-fadeInFail 0.8s ease-out;
+}
+
+.level3-tutorial-line.fork-bottom {
+  width: 150px;
+  height: 4px;
+  background: linear-gradient(to right, #22c55e, #ef4444);
+  border-radius: 2px;
+  transform: rotate(20deg);
+  transform-origin: left center;
+  margin-top: 8px;
+  animation: level3-fadeInFail 0.8s ease-out;
+}
+
+.level3-tutorial-x-mark {
+  position: absolute;
+  left: 120px;
+  top: -10px;
+  font-size: 48px;
+  color: #ef4444;
+  font-weight: bold;
+  animation: level3-xMarkPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.8s both;
+}
+
+@keyframes level3-fadeInFail {
+  0% {
+    opacity: 0;
+    transform: scale(0.8) rotate(0deg);
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes level3-xMarkPop {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* 步骤3: 问号提示 */
+.level3-tutorial-hint {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  animation: level3-hintFadeIn 0.6s ease-out;
+}
+
+.level3-tutorial-question {
+  font-size: 80px;
+  color: #fbbf24;
+  font-weight: bold;
+  margin-bottom: 20px;
+  animation: level3-questionBounce 1s ease-in-out infinite;
+}
+
+.level3-tutorial-text {
+  font-size: 24px;
+  color: #ffffff;
+  font-weight: 600;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+@keyframes level3-hintFadeIn {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -40%);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+}
+
+@keyframes level3-questionBounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+/* 步骤4: 均衡器解决方案 */
+.level3-tutorial-solution {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  animation: level3-solutionFadeIn 0.6s ease-out;
+}
+
+.level3-tutorial-balancer-icon {
+  margin-bottom: 24px;
+  animation: level3-iconGlow 2s ease-in-out infinite;
+}
+
+.level3-tutorial-solution-text {
+  font-size: 22px;
+  color: #ffffff;
+  font-weight: 600;
+  margin-bottom: 32px;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.level3-tutorial-highlight {
+  color: #4ade80;
+  font-weight: 700;
+  text-shadow: 0 0 10px rgba(74, 222, 128, 0.5);
+}
+
+.level3-tutorial-btn {
+  padding: 12px 32px;
+  font-size: 16px;
+  font-weight: 600;
+  background: rgba(74, 222, 128, 0.2);
+  border: 2px solid rgba(74, 222, 128, 0.5);
+  border-radius: 12px;
+  color: #4ade80;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.level3-tutorial-btn:hover {
+  background: rgba(74, 222, 128, 0.35);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(74, 222, 128, 0.3);
+}
+
+@keyframes level3-solutionFadeIn {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -40%);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+}
+
+@keyframes level3-iconGlow {
+  0%, 100% {
+    filter: drop-shadow(0 0 10px rgba(74, 222, 128, 0.5));
+  }
+  50% {
+    filter: drop-shadow(0 0 20px rgba(74, 222, 128, 0.8));
+  }
+}
+
+
+/* Skip按钮 */
+.level3-tutorial-skip-btn {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  padding: 10px 24px;
+  font-size: 16px;
+  font-weight: 600;
+  background: transparent;
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+  z-index: 600;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.level3-tutorial-skip-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: #ffffff;
+  color: #ffffff;
+  transform: translateY(-2px);
+}
+
+/* Level3 特定样式 */
+.level3-page {
+  /* 继承自 level-base */
+}
+
+.level3-clear-btn {
+  position: fixed;
+  top: 20px;
+  right: 320px;
+  width: 48px;
+  height: 48px;
+  background: rgba(239, 68, 68, 0.2);
+  border: 2px solid rgba(239, 68, 68, 0.5);
+  border-radius: 12px;
+  color: #ef4444;
+  font-size: 24px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.level3-clear-btn:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.35);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.level3-clear-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.level3-next-level-btn {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  padding: 12px 32px;
+  font-size: 18px;
+  font-weight: 600;
+  background: rgba(74, 222, 128, 0.2);
+  border: 2px solid rgba(74, 222, 128, 0.5);
+  border-radius: 12px;
+  color: #4ade80;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  z-index: 100;
+}
+
+.level3-next-level-btn:hover {
+  background: rgba(74, 222, 128, 0.35);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(74, 222, 128, 0.3);
+}

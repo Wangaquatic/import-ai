@@ -9,10 +9,11 @@ import TutorialPage from './pages/TutorialPage'
 import Level2Page from './pages/levels/Level2Page'
 import Level2CopyPage from './pages/levels/Level2CopyPage'
 import Level1Page from './pages/levels/Level1Page'
+import Level3Page from './pages/levels/Level3Page'
 import Level4Page from './pages/levels/Level4Page'
 import './utils/achievementDebug'
 
-type Page = 'home' | 'levels' | 'shop' | 'profile' | 'tutorial' | 'level1' | 'level2' | 'level2copy' | 'level4'
+type Page = 'home' | 'levels' | 'shop' | 'profile' | 'tutorial' | 'level1' | 'level2' | 'level2copy' | 'level3' | 'level4'
 
 function AppContent(): React.JSX.Element {
   const [currentPage, setCurrentPage] = useState<Page>('home')
@@ -63,6 +64,7 @@ function AppContent(): React.JSX.Element {
         {currentPage === 'level1' && <Level1Page onBack={() => navigateTo('levels')} onNextLevel={() => navigateTo('level2')} />}
         {currentPage === 'level2' && <Level2Page onBack={() => navigateTo('levels')} />}
         {currentPage === 'level2copy' && <Level2CopyPage onBack={() => navigateTo('levels')} onNextLevel={() => navigateTo('level2')} />}
+        {currentPage === 'level3' && <Level3Page onBack={() => navigateTo('levels')} onNextLevel={() => navigateTo('level4')} />}
         {currentPage === 'level4' && <Level4Page onBack={() => navigateTo('levels')} onNextLevel={() => navigateTo('levels')} />}
         {currentPage === 'shop' && <ShopPage onBack={goHome} />}
         {currentPage === 'profile' && <ProfilePage onBack={goHome} />}

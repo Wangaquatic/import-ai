@@ -1,13 +1,13 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import './LevelBase.css'
-import './Level1Page.css'
+import './Level3Page.css'
 import levelBg from '../../assets/level-bg.png'
 import level3Input from '../../assets/level3-input.png'
 import targetImg from '../../assets/target.jpg'
 import balancerImg from '../../assets/level3-balancer.png'
 import { useZoom } from '../../hooks/useZoom'
 
-interface Level1PageProps {
+interface Level3PageProps {
   onBack: () => void
   onNextLevel?: () => void
 }
@@ -32,15 +32,15 @@ interface Particle {
 }
 
 const COINS_KEY = 'player_coins'
-const LEVEL1_REWARD_KEY = 'level1_reward_claimed'
-const LEVEL1_PASSED_KEY = 'level1_passed'
-const LEVEL1_SAVE_KEY = 'level1_saved_state'
+const LEVEL3_REWARD_KEY = 'level3_reward_claimed'
+const LEVEL3_PASSED_KEY = 'level3_passed'
+const LEVEL3_SAVE_KEY = 'level3_saved_state'
 
-const Level1Page: React.FC<Level1PageProps> = ({ onBack, onNextLevel }) => {
+const Level3Page: React.FC<Level3PageProps> = ({ onBack, onNextLevel }) => {
   // 从localStorage加载保存的状态
   const loadSavedState = React.useCallback(() => {
     try {
-      const saved = localStorage.getItem(LEVEL1_SAVE_KEY)
+      const saved = localStorage.getItem(LEVEL3_SAVE_KEY)
       if (saved) {
         return JSON.parse(saved)
       }
@@ -53,19 +53,19 @@ const Level1Page: React.FC<Level1PageProps> = ({ onBack, onNextLevel }) => {
   const savedState = loadSavedState()
 
   const [coins, setCoins] = useState(() => parseInt(localStorage.getItem(COINS_KEY) || '0'))
-  const rewardClaimed = React.useRef(!!localStorage.getItem(LEVEL1_REWARD_KEY))
-  const [levelPassed, setLevelPassed] = useState(() => !!localStorage.getItem(LEVEL1_PASSED_KEY))
+  const rewardClaimed = React.useRef(!!localStorage.getItem(LEVEL3_REWARD_KEY))
+  const [levelPassed, setLevelPassed] = useState(() => !!localStorage.getItem(LEVEL3_PASSED_KEY))
   const [showTutorial, setShowTutorial] = useState(true) // 每次进入都显示
   const [tutorialStep, setTutorialStep] = useState(0)
   
   // 调试：打印初始状态
   useEffect(() => {
-    console.log('Level1 初始化:', {
+    console.log('Level3 初始化:', {
       coins,
       rewardClaimed: rewardClaimed.current,
       levelPassed: levelPassed,
-      rewardKey: localStorage.getItem(LEVEL1_REWARD_KEY),
-      passedKey: localStorage.getItem(LEVEL1_PASSED_KEY),
+      rewardKey: localStorage.getItem(LEVEL3_REWARD_KEY),
+      passedKey: localStorage.getItem(LEVEL3_PASSED_KEY),
       onNextLevel: !!onNextLevel
     })
     
@@ -73,10 +73,10 @@ const Level1Page: React.FC<Level1PageProps> = ({ onBack, onNextLevel }) => {
     const handleKeyPress = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.key === 'r') {
         e.preventDefault()
-        localStorage.removeItem(LEVEL1_REWARD_KEY)
+        localStorage.removeItem(LEVEL3_REWARD_KEY)
         rewardClaimed.current = false
-        console.log('✅ Level1 奖励状态已重置')
-        alert('Level1 奖励状态已重置，可以重新测试')
+        console.log('✅ Level3 奖励状态已重置')
+        alert('Level3 奖励状态已重置，可以重新测试')
       }
     }
     window.addEventListener('keydown', handleKeyPress)
@@ -388,7 +388,7 @@ const Level1Page: React.FC<Level1PageProps> = ({ onBack, onNextLevel }) => {
       placedNodes,
       timestamp: Date.now()
     }
-    localStorage.setItem(LEVEL1_SAVE_KEY, JSON.stringify(saveData))
+    localStorage.setItem(LEVEL3_SAVE_KEY, JSON.stringify(saveData))
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
   }
@@ -554,7 +554,7 @@ const Level1Page: React.FC<Level1PageProps> = ({ onBack, onNextLevel }) => {
               const allTargetsComplete = Object.values(targetStats).every(s => s.total >= 8 && (s.correct / s.total) === 1)
               
               if (allTargetsComplete) {
-                console.log('Level1 通关！', { 
+                console.log('Level3 通关！', { 
                   rewardClaimed: rewardClaimed.current,
                   targetStats 
                 })
@@ -573,7 +573,7 @@ const Level1Page: React.FC<Level1PageProps> = ({ onBack, onNextLevel }) => {
                 // if (!rewardClaimed.current) {
                   if (!rewardClaimed.current) {
                     rewardClaimed.current = true
-                    localStorage.setItem(LEVEL1_REWARD_KEY, '1')
+                    localStorage.setItem(LEVEL3_REWARD_KEY, '1')
                     const newCoins = parseInt(localStorage.getItem(COINS_KEY) || '0') + 150
                     localStorage.setItem(COINS_KEY, String(newCoins))
                     setCoins(newCoins)
@@ -581,17 +581,17 @@ const Level1Page: React.FC<Level1PageProps> = ({ onBack, onNextLevel }) => {
                   
                   // 标记关卡已通过
                   if (!levelPassed) {
-                    localStorage.setItem(LEVEL1_PASSED_KEY, '1')
+                    localStorage.setItem(LEVEL3_PASSED_KEY, '1')
                     setLevelPassed(true)
                   }
                   
-                  console.log('Level1 显示奖励弹窗')
+                  console.log('Level3 显示奖励弹窗')
                   
                   // 使用setTimeout确保状态更新后再显示奖励
                   setTimeout(() => {
                     setShowVictory(true)
                     setShowReward(true)
-                    console.log('Level1 奖励状态已设置')
+                    console.log('Level3 奖励状态已设置')
                     setTimeout(() => setShowReward(false), 3000)
                   }, 100)
                 // }
@@ -737,7 +737,7 @@ const Level1Page: React.FC<Level1PageProps> = ({ onBack, onNextLevel }) => {
   return (
     <div 
       ref={pageRef}
-      className="level-base level1-page" 
+      className="level-base level3-page" 
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       style={{ cursor: draggingNode || draggingPlacedNode ? 'grabbing' : 'default' }}
@@ -799,7 +799,7 @@ const Level1Page: React.FC<Level1PageProps> = ({ onBack, onNextLevel }) => {
 
       {/* 清除按钮 - 垃圾桶样式 */}
       <button 
-        className="level1-clear-btn" 
+        className="level3-clear-btn" 
         onClick={handleClearAll}
         disabled={testing}
         title="清除所有节点和连接"
@@ -831,9 +831,9 @@ const Level1Page: React.FC<Level1PageProps> = ({ onBack, onNextLevel }) => {
       )}
 
       {/* 下一关按钮 - 一直显示 */}
-      {console.log('Level1 按钮渲染检查:', { levelPassed, onNextLevel: !!onNextLevel, shouldShow: levelPassed && !!onNextLevel })}
+      {console.log('Level3 按钮渲染检查:', { levelPassed, onNextLevel: !!onNextLevel, shouldShow: levelPassed && !!onNextLevel })}
       {onNextLevel && (
-        <button className="level1-next-level-btn" onClick={onNextLevel}>
+        <button className="level3-next-level-btn" onClick={onNextLevel}>
           下一关 →
         </button>
       )}
@@ -1200,35 +1200,35 @@ const Level1Page: React.FC<Level1PageProps> = ({ onBack, onNextLevel }) => {
       
       {/* 教程引导 */}
       {showTutorial && (
-        <div className="level1-tutorial-overlay">
-          <div className="level1-tutorial-content">
+        <div className="level3-tutorial-overlay">
+          <div className="level3-tutorial-content">
             {/* 步骤1-3: 显示数据流、分叉失败、问号提示 */}
             {tutorialStep >= 1 && tutorialStep < 4 && (
               <>
                 {/* 步骤1: 显示一条数据流 */}
-                <div className="level1-tutorial-stream">
-                  <div className="level1-tutorial-line single" />
-                  <div className="level1-tutorial-data-flow">
-                    <div className="level1-tutorial-particle" style={{ animationDelay: '0s' }} />
-                    <div className="level1-tutorial-particle" style={{ animationDelay: '0.3s' }} />
-                    <div className="level1-tutorial-particle" style={{ animationDelay: '0.6s' }} />
+                <div className="level3-tutorial-stream">
+                  <div className="level3-tutorial-line single" />
+                  <div className="level3-tutorial-data-flow">
+                    <div className="level3-tutorial-particle" style={{ animationDelay: '0s' }} />
+                    <div className="level3-tutorial-particle" style={{ animationDelay: '0.3s' }} />
+                    <div className="level3-tutorial-particle" style={{ animationDelay: '0.6s' }} />
                   </div>
                 </div>
                 
                 {/* 步骤2: 尝试分叉但失败 */}
                 {tutorialStep >= 2 && (
-                  <div className="level1-tutorial-fork-attempt">
-                    <div className="level1-tutorial-line fork-top failed" />
-                    <div className="level1-tutorial-line fork-bottom failed" />
-                    <div className="level1-tutorial-x-mark">✗</div>
+                  <div className="level3-tutorial-fork-attempt">
+                    <div className="level3-tutorial-line fork-top failed" />
+                    <div className="level3-tutorial-line fork-bottom failed" />
+                    <div className="level3-tutorial-x-mark">✗</div>
                   </div>
                 )}
                 
                 {/* 步骤3: 显示问号和提示 */}
                 {tutorialStep >= 3 && (
-                  <div className="level1-tutorial-hint">
-                    <div className="level1-tutorial-question">?</div>
-                    <div className="level1-tutorial-text">
+                  <div className="level3-tutorial-hint">
+                    <div className="level3-tutorial-question">?</div>
+                    <div className="level3-tutorial-text">
                       一条数据流无法自动分为两条...
                     </div>
                   </div>
@@ -1238,14 +1238,14 @@ const Level1Page: React.FC<Level1PageProps> = ({ onBack, onNextLevel }) => {
             
             {/* 步骤4: 显示均衡器解决方案（清空之前的内容） */}
             {tutorialStep >= 4 && (
-              <div className="level1-tutorial-solution">
-                <div className="level1-tutorial-balancer-icon">
+              <div className="level3-tutorial-solution">
+                <div className="level3-tutorial-balancer-icon">
                   <img src={balancerImg} alt="均衡器" style={{ width: '80px', borderRadius: '8px' }} />
                 </div>
-                <div className="level1-tutorial-solution-text">
-                  使用<span className="level1-tutorial-highlight">均衡器</span>节点进行数据分流！
+                <div className="level3-tutorial-solution-text">
+                  使用<span className="level3-tutorial-highlight">均衡器</span>节点进行数据分流！
                 </div>
-                <button className="level1-tutorial-btn" onClick={handleCloseTutorial}>
+                <button className="level3-tutorial-btn" onClick={handleCloseTutorial}>
                   我明白了
                 </button>
               </div>
@@ -1253,7 +1253,7 @@ const Level1Page: React.FC<Level1PageProps> = ({ onBack, onNextLevel }) => {
           </div>
           
           {/* Skip按钮 */}
-          <button className="level1-tutorial-skip-btn" onClick={handleCloseTutorial}>
+          <button className="level3-tutorial-skip-btn" onClick={handleCloseTutorial}>
             Skip
           </button>
         </div>
@@ -1262,4 +1262,4 @@ const Level1Page: React.FC<Level1PageProps> = ({ onBack, onNextLevel }) => {
   )
 }
 
-export default Level1Page
+export default Level3Page

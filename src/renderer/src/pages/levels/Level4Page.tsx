@@ -59,6 +59,8 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel }) => {
   const rewardClaimed = React.useRef(!!localStorage.getItem(LEVEL4_REWARD_KEY))
   const [levelPassed, setLevelPassed] = useState(() => !!localStorage.getItem(LEVEL4_PASSED_KEY))
   const [showHiddenLevel, setShowHiddenLevel] = useState(false)
+  const [showTutorial, setShowTutorial] = useState(true) // 每次进入都显示
+  const [tutorialStep, setTutorialStep] = useState(0)
   
   // 调试：打印初始状态
   useEffect(() => {
@@ -84,6 +86,31 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel }) => {
     window.addEventListener('keydown', handleKeyPress)
     return () => window.removeEventListener('keydown', handleKeyPress)
   }, [])
+  
+  // 教程动画序列
+  useEffect(() => {
+    if (!showTutorial) return
+    
+    const timers: NodeJS.Timeout[] = []
+    
+    // 步骤1: 显示单个分类器处理数据流 (0.5秒后)
+    timers.push(setTimeout(() => setTutorialStep(1), 500))
+    
+    // 步骤2: 显示慢速标记 (3秒后)
+    timers.push(setTimeout(() => setTutorialStep(2), 3000))
+    
+    // 步骤3: 显示问号和提示 (5秒后)
+    timers.push(setTimeout(() => setTutorialStep(3), 5000))
+    
+    // 步骤4: 显示均衡器+多分类器解决方案 (7.5秒后)
+    timers.push(setTimeout(() => setTutorialStep(4), 7500))
+    
+    return () => timers.forEach(t => clearTimeout(t))
+  }, [showTutorial])
+  
+  const handleCloseTutorial = () => {
+    setShowTutorial(false)
+  }
   const [infoModal, setInfoModal] = useState<'input' | 'output' | 'balancer' | 'classifier' | 'trash' | null>(null)
   const [placedNodes, setPlacedNodes] = useState<PlacedNode[]>(savedState?.placedNodes || [])
   const [draggingNode, setDraggingNode] = useState<{ type: 'balancer' | 'classifier' | 'trash'; mouseX: number; mouseY: number } | null>(null)
@@ -1150,6 +1177,86 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel }) => {
       {/* 隐藏关卡弹窗 */}
       {showHiddenLevel && (
         <Level4HiddenModal onClose={() => setShowHiddenLevel(false)} />
+      )}
+      
+      {/* 教程引导 */}
+      {showTutorial && (
+        <div className="level4-tutorial-overlay">
+          <div className="level4-tutorial-content">
+            {/* 步骤1-2: 显示单个分类器处理数据流 + 慢速标记 */}
+            {tutorialStep >= 1 && tutorialStep < 3 && (
+              <div className="level4-tutorial-single-classifier">
+                {/* 输入数据流 */}
+                <div className="level4-tutorial-input-stream">
+                  <div className="level4-tutorial-particle-flow">
+                    <div className="level4-tutorial-particle red" style={{ animationDelay: '0s' }} />
+                    <div className="level4-tutorial-particle blue" style={{ animationDelay: '0.5s' }} />
+                    <div className="level4-tutorial-particle red" style={{ animationDelay: '1s' }} />
+                    <div className="level4-tutorial-particle blue" style={{ animationDelay: '1.5s' }} />
+                    <div className="level4-tutorial-particle red" style={{ animationDelay: '2s' }} />
+                    <div className="level4-tutorial-particle blue" style={{ animationDelay: '2.5s' }} />
+                  </div>
+                </div>
+                
+                {/* 分类器 */}
+                <div className="level4-tutorial-classifier-box">
+                  分类器
+                  {tutorialStep >= 2 && (
+                    <div className="level4-tutorial-slow-mark">🐌</div>
+                  )}
+                </div>
+                
+                {/* 输出数据流 */}
+                <div className="level4-tutorial-output-stream" />
+              </div>
+            )}
+            
+            {/* 步骤3: 显示问号和提示 */}
+            {tutorialStep === 3 && (
+              <div className="level4-tutorial-hint">
+                <div className="level4-tutorial-question">?</div>
+                <div className="level4-tutorial-text">
+                  只用一个分类器进行分类太慢了...<br />
+                  如何加快处理速度？
+                </div>
+              </div>
+            )}
+            
+            {/* 步骤4: 显示均衡器+多分类器解决方案 */}
+            {tutorialStep >= 4 && (
+              <div className="level4-tutorial-solution">
+                <div className="level4-tutorial-parallel-system">
+                  {/* 均衡器 */}
+                  <div className="level4-tutorial-balancer-icon">
+                    均衡器
+                  </div>
+                  
+                  <div className="level4-tutorial-arrow">→</div>
+                  
+                  {/* 多个分类器 */}
+                  <div className="level4-tutorial-classifiers">
+                    <div className="level4-tutorial-mini-classifier">分类器1</div>
+                    <div className="level4-tutorial-mini-classifier">分类器2</div>
+                  </div>
+                </div>
+                
+                <div className="level4-tutorial-solution-text">
+                  使用<span className="level4-tutorial-highlight">均衡器</span>将数据流分配到<br />
+                  多个<span className="level4-tutorial-highlight">分类器</span>同时处理！
+                </div>
+                
+                <button className="level4-tutorial-btn" onClick={handleCloseTutorial}>
+                  我明白了
+                </button>
+              </div>
+            )}
+          </div>
+          
+          {/* Skip按钮 */}
+          <button className="level4-tutorial-skip-btn" onClick={handleCloseTutorial}>
+            Skip
+          </button>
+        </div>
       )}
     </div>
   )
