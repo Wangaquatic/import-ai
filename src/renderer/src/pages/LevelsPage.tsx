@@ -3,7 +3,7 @@ import './LevelsPage.css'
 
 interface LevelsPageProps {
   onBack: () => void
-  onNavigate: (page: 'tutorial' | 'level1' | 'level2' | 'level2copy' | 'level4') => void
+  onNavigate: (page: 'tutorial' | 'level1' | 'level2' | 'level3' | 'level4') => void
 }
 
 const levels = [
@@ -34,9 +34,9 @@ const LevelsPage: React.FC<LevelsPageProps> = ({ onBack, onNavigate }) => {
             className={`level-card ${level.locked ? 'locked' : ''}`}
             onClick={() => {
               if (level.locked) return
-              if (level.id === 1) onNavigate('level2copy')
+              if (level.id === 1) onNavigate('level1')
               else if (level.id === 2) onNavigate('level2')
-              else if (level.id === 3) onNavigate('level1')
+              else if (level.id === 3) onNavigate('level3')
               else if (level.id === 4) onNavigate('level4')
               else alert(`开始关卡 ${level.id}`)
             }}

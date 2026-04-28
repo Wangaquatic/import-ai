@@ -69,6 +69,19 @@ const Level2Page: React.FC<Level2PageProps> = ({ onBack }) => {
       const saved = localStorage.getItem(LEVEL2_SAVE_KEY)
       if (saved) {
         const data = JSON.parse(saved)
+        // 确保所有节点都有有效的pos属性
+        if (data.placedNodes) {
+          data.placedNodes = data.placedNodes.map((node: PlacedNode) => {
+            if (!node.pos || typeof node.pos.x !== 'number' || typeof node.pos.y !== 'number') {
+              // 如果pos无效，使用默认位置
+              return {
+                ...node,
+                pos: node.type === 'classifier' ? { x: 400, y: 200 } : { x: 400, y: 350 }
+              }
+            }
+            return node
+          })
+        }
         return data
       }
     } catch (error) {
@@ -225,6 +238,7 @@ const Level2Page: React.FC<Level2PageProps> = ({ onBack }) => {
         )
       }
       if (draggingFromLibrary) {
+        // 只更新拖拽状态，不更新节点位置（因为节点还没添加）
         setDraggingFromLibrary({ ...draggingFromLibrary, mouseX: e.clientX, mouseY: e.clientY })
       }
       if (draggingPlacedNode && pageRef.current) {
@@ -232,11 +246,10 @@ const Level2Page: React.FC<Level2PageProps> = ({ onBack }) => {
         const x = e.clientX - rect.left - draggingPlacedNode.offsetX
         const y = e.clientY - rect.top - draggingPlacedNode.offsetY
         
-        if (draggingPlacedNode.nodeId === 'classifier') {
-          setClassifierPos({ x, y })
-        } else if (draggingPlacedNode.nodeId === 'trash') {
-          setTrashPos({ x, y })
-        }
+        // 更新placedNodes中的位置
+        setPlacedNodes(prev => prev.map(n => 
+          n.id === draggingPlacedNode.nodeId ? { ...n, pos: { x, y } } : n
+        ))
       }
     },
     [draggingLine, draggingFromLibrary, draggingPlacedNode]
@@ -251,37 +264,24 @@ const Level2Page: React.FC<Level2PageProps> = ({ onBack }) => {
       // 检查是否在有效区域（不在侧边栏内）
       if (sidebarRef.current) {
         const sidebarRect = sidebarRef.current.getBoundingClientRect()
-        if (e.clientX < sidebarRect.left && mouseX > 160 && mouseY > 0 && mouseY < rect.height) {
+        if (e.clientX < sidebarRect.left && mouseX > 0 && mouseY > 0 && mouseY < rect.height) {
           const nodeType = draggingFromLibrary.type
           const existingNode = placedNodes.find((n) => n.type === nodeType)
           
           if (!existingNode) {
-            // 计算节点尺寸，让节点中心对齐鼠标位置
-            const nodeWidth = nodeType === 'classifier' ? 120 : 80
-            const nodeHeight = nodeType === 'classifier' ? 90 : 80
-            
-            const x = mouseX - nodeWidth / 2
-            const y = mouseY - nodeHeight / 2
-            
+            // 在鼠标位置添加节点
             const newNode: PlacedNode = {
               id: nodeType,
               type: nodeType,
-              pos: { x, y }
+              pos: { x: mouseX, y: mouseY }
             }
             setPlacedNodes([...placedNodes, newNode])
-            
-            // 更新对应的位置状态
-            if (nodeType === 'classifier') {
-              setClassifierPos({ x, y })
-            } else if (nodeType === 'trash') {
-              setTrashPos({ x, y })
-            }
           }
         }
       }
       setDraggingFromLibrary(null)
     } else if (draggingPlacedNode) {
-      // 检查是否在删除区域
+      // 检查是否拖回侧边栏删除
       if (sidebarRef.current) {
         const sidebarRect = sidebarRef.current.getBoundingClientRect()
         if (e.clientX >= sidebarRect.left) {
@@ -291,7 +291,6 @@ const Level2Page: React.FC<Level2PageProps> = ({ onBack }) => {
           
           // 删除与该节点相关的所有连接线
           setConnections(prev => prev.filter(conn => {
-            // 根据节点类型确定相关的连接点ID
             if (nodeId === 'classifier') {
               return !conn.from.startsWith('classifier-') && !conn.to.startsWith('classifier-')
             } else if (nodeId === 'trash') {
@@ -325,17 +324,9 @@ const Level2Page: React.FC<Level2PageProps> = ({ onBack }) => {
 
     const rect = pageRef.current.getBoundingClientRect()
     
-    // 获取节点当前位置
-    let currentPos = { x: 0, y: 0 }
-    if (nodeId === 'classifier') {
-      currentPos = classifierPos
-    } else if (nodeId === 'trash') {
-      currentPos = trashPos
-    }
-    
     // 计算鼠标相对于节点的偏移
-    const offsetX = e.clientX - rect.left - currentPos.x
-    const offsetY = e.clientY - rect.top - currentPos.y
+    const offsetX = e.clientX - rect.left - node.pos.x
+    const offsetY = e.clientY - rect.top - node.pos.y
     
     setDraggingPlacedNode({ nodeId, offsetX, offsetY })
   }
@@ -494,6 +485,23 @@ const Level2Page: React.FC<Level2PageProps> = ({ onBack }) => {
     localStorage.setItem(LEVEL2_SAVE_KEY, JSON.stringify(saveData))
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
+  }
+
+  const handleReset = (): void => {
+    // 清除保存的状态
+    localStorage.removeItem(LEVEL2_SAVE_KEY)
+    // 重置所有状态
+    setPlacedNodes([])
+    setConnections([])
+    setTestParticles([])
+    setCorrectRate(0)
+    setTrainingProgress(0)
+    setElapsed(0)
+    setTesting(false)
+    setCurrentColorMode('red')
+    setSelectedColors({ red: true, green: false, blue: false })
+    // 提示用户
+    alert('第二关已重置！')
   }
 
   const handleTest = useCallback(() => {
@@ -791,6 +799,9 @@ const Level2Page: React.FC<Level2PageProps> = ({ onBack }) => {
           <button className={`toolbar-btn save-btn ${saved ? 'saved' : ''}`} onClick={handleSave}>
             {saved ? '已保存 ✓' : '保存'}
           </button>
+          <button className="toolbar-btn reset-btn" onClick={handleReset} title="重置关卡">
+            🔄
+          </button>
         </div>
         <div className="toolbar-content">
           <div className="toolbar-title">节点库</div>
@@ -860,7 +871,7 @@ const Level2Page: React.FC<Level2PageProps> = ({ onBack }) => {
       <div
         className="classifier-node"
         style={{ 
-          transform: `translate(${classifierPos.x}px, ${classifierPos.y}px) scale(${zoom})`,
+          transform: `translate(${placedNodes.find(n => n.type === 'classifier')?.pos.x ?? 400}px, ${placedNodes.find(n => n.type === 'classifier')?.pos.y ?? 200}px) scale(${zoom})`,
           transformOrigin: 'center center',
           display: placedNodes.find(n => n.type === 'classifier') ? 'block' : 'none'
         }}
@@ -904,7 +915,7 @@ const Level2Page: React.FC<Level2PageProps> = ({ onBack }) => {
       <div
         className="trash-node"
         style={{ 
-          transform: `translate(${trashPos.x}px, ${trashPos.y}px) scale(${zoom})`,
+          transform: `translate(${placedNodes.find(n => n.type === 'trash')?.pos.x ?? 400}px, ${placedNodes.find(n => n.type === 'trash')?.pos.y ?? 350}px) scale(${zoom})`,
           transformOrigin: 'center center',
           display: placedNodes.find(n => n.type === 'trash') ? 'block' : 'none'
         }}
@@ -927,7 +938,7 @@ const Level2Page: React.FC<Level2PageProps> = ({ onBack }) => {
             left: draggingFromLibrary.mouseX,
             top: draggingFromLibrary.mouseY,
             transform: 'translate(-50%, -50%)',
-            opacity: 0.6,
+            opacity: 0.7,
             pointerEvents: 'none',
             zIndex: 1000
           }}

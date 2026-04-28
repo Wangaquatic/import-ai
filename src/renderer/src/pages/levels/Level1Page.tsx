@@ -1,728 +1,46 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react'
+import React, { useState, useRef, useCallback, useEffect } from 'react'
 import './LevelBase.css'
 import './Level1Page.css'
 import levelBg from '../../assets/level-bg.png'
-import level3Input from '../../assets/level3-input.png'
+import classifierImg from '../../assets/classifier.jpg'
+import tutorialInput from '../../assets/tutorial-input.png'
 import targetImg from '../../assets/target.jpg'
-import balancerImg from '../../assets/level3-balancer.png'
-import { useZoom } from '../../hooks/useZoom'
+import noTargetImg from '../../assets/no-target.png'
+import HiddenLevelModal, { type TrainingParams } from '../../components/HiddenLevelModal'
 
-interface Level1PageProps {
+interface Level2CopyPageProps {
   onBack: () => void
-  onNextLevel?: () => void
+  onNextLevel: () => void
 }
 
 interface Point { x: number; y: number }
 interface Connection { from: string; to: string }
+interface SavedState { 
+  connections: Connection[]
+  pos: { x: number; y: number }
+  placedNodes?: PlacedNode[]
+}
+interface Particle { id: number; color: string; from: string; to: string; progress: number; speed: number; done: boolean }
 interface PlacedNode {
   id: string
-  type: 'balancer'
+  type: 'classifier'
   pos: Point
-  maxCapacity: number // 最大容量
-  currentLoad: number // 当前负载
 }
-interface Particle {
-  id: number
-  color: string
-  from: string
-  to: string
-  progress: number
-  speed: number
-  done: boolean
+interface DraggingNodeState {
+  type: 'classifier'
+  mouseX: number
+  mouseY: number
 }
 
+const SAVE_KEY = 'level2copy_tutorial_saved_state'
 const COINS_KEY = 'player_coins'
-const LEVEL1_REWARD_KEY = 'level1_reward_claimed'
-const LEVEL1_PASSED_KEY = 'level1_passed'
-const LEVEL1_SAVE_KEY = 'level1_saved_state'
+const TUTORIAL_REWARD_KEY = 'level2copy_tutorial_reward_claimed'
+const TUTORIAL_PASSED_KEY = 'level2copy_tutorial_passed'
+const HIDDEN_PARAMS_KEY = 'level2copy_tutorial_hidden_params'
 
-const Level1Page: React.FC<Level1PageProps> = ({ onBack, onNextLevel }) => {
-  // 从localStorage加载保存的状态
-  const loadSavedState = React.useCallback(() => {
-    try {
-      const saved = localStorage.getItem(LEVEL1_SAVE_KEY)
-      if (saved) {
-        return JSON.parse(saved)
-      }
-    } catch (error) {
-      console.error('Failed to load saved state:', error)
-    }
-    return null
-  }, [])
-
-  const savedState = loadSavedState()
-
-  const [coins, setCoins] = useState(() => parseInt(localStorage.getItem(COINS_KEY) || '0'))
-  const rewardClaimed = React.useRef(!!localStorage.getItem(LEVEL1_REWARD_KEY))
-  const [levelPassed, setLevelPassed] = useState(() => !!localStorage.getItem(LEVEL1_PASSED_KEY))
-  const [showTutorial, setShowTutorial] = useState(true) // 每次进入都显示
-  const [tutorialStep, setTutorialStep] = useState(0)
-  
-  // 调试：打印初始状态
-  useEffect(() => {
-    console.log('Level1 初始化:', {
-      coins,
-      rewardClaimed: rewardClaimed.current,
-      levelPassed: levelPassed,
-      rewardKey: localStorage.getItem(LEVEL1_REWARD_KEY),
-      passedKey: localStorage.getItem(LEVEL1_PASSED_KEY),
-      onNextLevel: !!onNextLevel
-    })
-    
-    // 开发模式：按Ctrl+R重置奖励状态
-    const handleKeyPress = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.key === 'r') {
-        e.preventDefault()
-        localStorage.removeItem(LEVEL1_REWARD_KEY)
-        rewardClaimed.current = false
-        console.log('✅ Level1 奖励状态已重置')
-        alert('Level1 奖励状态已重置，可以重新测试')
-      }
-    }
-    window.addEventListener('keydown', handleKeyPress)
-    return () => window.removeEventListener('keydown', handleKeyPress)
-  }, [])
-  
-  // 教程动画序列
-  useEffect(() => {
-    if (!showTutorial) return
-    
-    const timers: NodeJS.Timeout[] = []
-    
-    // 步骤1: 显示一条数据流 (2秒后)
-    timers.push(setTimeout(() => setTutorialStep(1), 500))
-    
-    // 步骤2: 尝试分叉但失败 (4秒后)
-    timers.push(setTimeout(() => setTutorialStep(2), 2500))
-    
-    // 步骤3: 显示问号和提示 (6秒后)
-    timers.push(setTimeout(() => setTutorialStep(3), 4500))
-    
-    // 步骤4: 显示均衡器解决方案 (8秒后)
-    timers.push(setTimeout(() => setTutorialStep(4), 7000))
-    
-    return () => timers.forEach(t => clearTimeout(t))
-  }, [showTutorial])
-  
-  const handleCloseTutorial = () => {
-    setShowTutorial(false)
-  }
-  
-  const [infoModal, setInfoModal] = useState<'input' | 'output' | 'balancer' | null>(null)
-  const [placedNodes, setPlacedNodes] = useState<PlacedNode[]>(savedState?.placedNodes || [])
-  const [draggingNode, setDraggingNode] = useState<{ type: 'balancer'; mouseX: number; mouseY: number } | null>(null)
-  const [draggingPlacedNode, setDraggingPlacedNode] = useState<{ nodeId: string; offsetX: number; offsetY: number } | null>(null)
-  const [isOverDeleteZone, setIsOverDeleteZone] = useState(false)
-  const [connections, setConnections] = useState<Connection[]>(savedState?.connections || [])
-  const [draggingLine, setDraggingLine] = useState<{ fromId: string; mouse: Point } | null>(null)
-  const [testing, setTesting] = useState(false)
-  const [testParticles, setTestParticles] = useState<Particle[]>([])
-  const [targetProgress, setTargetProgress] = useState<number[]>([0, 0, 0, 0])
-  const [targetAccuracy, setTargetAccuracy] = useState<number[]>([0, 0, 0, 0])
-  const [elapsed, setElapsed] = useState(0)
-  const [showVictory, setShowVictory] = useState(false)
-  const [showReward, setShowReward] = useState(false)
-  const [speedMultiplier, setSpeedMultiplier] = useState(1.0)
-  const [showTimeout, setShowTimeout] = useState(false)
-  const [saved, setSaved] = useState(false)
-  
-  // 缩放功能
-  const { zoom, resetZoom } = useZoom(0.5, 2.0, 0.1)
-  
-  const dotRefs = useRef<Record<string, HTMLDivElement | null>>({})
-  const [, forceUpdate] = useState(0)
-  const pageRef = useRef<HTMLDivElement>(null)
-  const sidebarRef = useRef<HTMLDivElement>(null)
-  const animFrameRef = useRef<number | null>(null)
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const nodeStateRef = useRef<Record<string, { queue: number[]; processing: boolean; nextOutput: 1 | 2 }>>({})
-  const speedMultiplierRef = useRef(1.0)
-  const elapsedRef = useRef(0)
-
-  useEffect(() => {
-    const timer = setTimeout(() => forceUpdate(n => n + 1), 100)
-    return () => clearTimeout(timer)
-  }, [])
-
-  // 缩放变化时更新连接线
-  useEffect(() => {
-    forceUpdate(n => n + 1)
-  }, [zoom])
-
-  useEffect(() => {
-    return () => {
-      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current)
-      if (timerRef.current) clearInterval(timerRef.current)
-    }
-  }, [])
-
-  const setDotRef = (id: string) => (el: HTMLDivElement | null) => {
-    dotRefs.current[id] = el
-  }
-
-  const getDotCenter = useCallback((id: string): Point | null => {
-    const el = dotRefs.current[id]
-    if (!el) return null
-    const rect = el.getBoundingClientRect()
-    return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
-  }, [])
-
-  const onDotMouseDown = (e: React.MouseEvent, id: string): void => {
-    e.stopPropagation()
-    const center = getDotCenter(id)
-    if (!center) return
-    setDraggingLine({ fromId: id, mouse: center })
-    e.preventDefault()
-  }
-
-  const onDotMouseUp = (e: React.MouseEvent, id: string): void => {
-    e.stopPropagation()
-    if (!draggingLine) return
-    const from = draggingLine.fromId
-    if (from === id) {
-      setDraggingLine(null)
-      return
-    }
-
-    // 定义连接规则
-    const fromParts = from.split('-')
-    const toParts = id.split('-')
-    
-    // input-out 只能连到节点的 -in 或 target-in
-    // 节点的 -out1/-out2 只能连到其他节点的 -in 或 target-in
-    // 每个输出点只能发出一条线，但每个输入点可以接收多条线
-    if (from === 'input-out' && (id.endsWith('-in') || toParts[0].startsWith('target'))) {
-      setConnections(prev => [...prev.filter(c => c.from !== from), { from, to: id }])
-    } else if (fromParts[fromParts.length - 1].startsWith('out') && (id.endsWith('-in') || toParts[0].startsWith('target'))) {
-      setConnections(prev => [...prev.filter(c => c.from !== from), { from, to: id }])
-    }
-    
-    setDraggingLine(null)
-  }
-
-  const handleDeleteConnection = (index: number, e: React.MouseEvent) => {
-    const clickX = e.clientX
-    const clickY = e.clientY
-    const conn = connections[index]
-    
-    // 获取连接线两端点的位置
-    const from = getDotCenter(conn.from)
-    const to = getDotCenter(conn.to)
-    if (!from || !to) return
-    
-    // 计算点击位置到两端点的距离
-    const distToFrom = Math.sqrt(Math.pow(clickX - from.x, 2) + Math.pow(clickY - from.y, 2))
-    const distToTo = Math.sqrt(Math.pow(clickX - to.x, 2) + Math.pow(clickY - to.y, 2))
-    
-    // 如果点击位置距离任一端点小于30px，则不删除（保护连接点附近区域）
-    if (distToFrom < 30 || distToTo < 30) {
-      return
-    }
-    
-    setConnections(prev => prev.filter((_, i) => i !== index))
-  }
-
-  const renderLines = (): JSX.Element[] => {
-    return connections.map((conn, i) => {
-      const from = getDotCenter(conn.from)
-      const to = getDotCenter(conn.to)
-      if (!from || !to) return <g key={i} />
-      return (
-        <g key={i}>
-          {/* 透明的粗线用于点击检测 */}
-          <line
-            x1={from.x}
-            y1={from.y}
-            x2={to.x}
-            y2={to.y}
-            stroke="transparent"
-            strokeWidth="12"
-            strokeLinecap="round"
-            style={{ 
-              cursor: 'pointer', 
-              pointerEvents: draggingLine ? 'none' : 'stroke'  // 拖动时禁用点击
-            }}
-            onClick={(e) => handleDeleteConnection(i, e)}
-          />
-          {/* 可见的细线 */}
-          <line
-            x1={from.x}
-            y1={from.y}
-            x2={to.x}
-            y2={to.y}
-            stroke="#4ade80"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            style={{ pointerEvents: 'none' }}
-          />
-        </g>
-      )
-    })
-  }
-
-  const renderDraggingLine = (): JSX.Element | null => {
-    if (!draggingLine) return null
-    const from = getDotCenter(draggingLine.fromId)
-    if (!from) return null
-    return (
-      <line
-        x1={from.x}
-        y1={from.y}
-        x2={draggingLine.mouse.x}
-        y2={draggingLine.mouse.y}
-        stroke="#4ade80"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeDasharray="6 3"
-      />
-    )
-  }
-
-  const handleNodeDragStart = (e: React.MouseEvent, nodeType: 'balancer') => {
-    if (placedNodes.length >= 3) return
-    e.preventDefault()
-    setDraggingNode({ type: nodeType, mouseX: e.clientX, mouseY: e.clientY })
-  }
-
-  const handleMouseMove = (e: React.MouseEvent): void => {
-    if (draggingNode) {
-      setDraggingNode({ ...draggingNode, mouseX: e.clientX, mouseY: e.clientY })
-    } else if (draggingPlacedNode && pageRef.current) {
-      const rect = pageRef.current.getBoundingClientRect()
-      const x = e.clientX - rect.left - draggingPlacedNode.offsetX
-      const y = e.clientY - rect.top - draggingPlacedNode.offsetY
-      
-      setPlacedNodes(prev => prev.map(n => 
-        n.id === draggingPlacedNode.nodeId ? { ...n, pos: { x, y } } : n
-      ))
-
-      // 检查是否在删除区域（右侧边栏）
-      if (sidebarRef.current) {
-        const sidebarRect = sidebarRef.current.getBoundingClientRect()
-        const isOver = e.clientX >= sidebarRect.left
-        setIsOverDeleteZone(isOver)
-      }
-    } else if (draggingLine) {
-      setDraggingLine(prev => prev ? { ...prev, mouse: { x: e.clientX, y: e.clientY } } : null)
-    }
-  }
-
-  const handleMouseUp = (e: React.MouseEvent): void => {
-    if (draggingNode && pageRef.current) {
-      const rect = pageRef.current.getBoundingClientRect()
-      const x = e.clientX - rect.left
-      const y = e.clientY - rect.top
-      
-      // 侧边栏宽度300px，左侧面板160px
-      if (x > 160 && x < rect.width - 300 && y > 0 && y < rect.height) {
-        if (placedNodes.length < 3) {
-          const newNode: PlacedNode = {
-            id: `balancer-${Date.now()}`,
-            type: draggingNode.type,
-            pos: { x, y },
-            maxCapacity: 5, // 平衡器最大容量为5
-            currentLoad: 0
-          }
-          setPlacedNodes([...placedNodes, newNode])
-        }
-      }
-      setDraggingNode(null)
-    } else if (draggingPlacedNode) {
-      // 检查是否在删除区域
-      if (isOverDeleteZone) {
-        const nodeId = draggingPlacedNode.nodeId
-        // 删除节点
-        setPlacedNodes(prev => prev.filter(n => n.id !== nodeId))
-        // 删除所有与该节点相关的连接线
-        setConnections(prev => prev.filter(conn => 
-          !conn.from.startsWith(nodeId) && !conn.to.startsWith(nodeId)
-        ))
-      }
-      setDraggingPlacedNode(null)
-      setIsOverDeleteZone(false)
-    } else if (draggingLine) {
-      setDraggingLine(null)
-    }
-  }
-
-  const handlePlacedNodeMouseDown = (nodeId: string, e: React.MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    const node = placedNodes.find(n => n.id === nodeId)
-    if (!node || !pageRef.current) return
-
-    const rect = pageRef.current.getBoundingClientRect()
-    const offsetX = e.clientX - rect.left - node.pos.x
-    const offsetY = e.clientY - rect.top - node.pos.y
-    
-    setDraggingPlacedNode({ nodeId, offsetX, offsetY })
-  }
-
-  const handleDeleteNode = (nodeId: string, e: React.MouseEvent) => {
-    e.stopPropagation()
-    // 删除节点
-    setPlacedNodes(prev => prev.filter(n => n.id !== nodeId))
-    // 删除所有与该节点相关的连接线
-    setConnections(prev => prev.filter(conn => 
-      !conn.from.startsWith(nodeId) && !conn.to.startsWith(nodeId)
-    ))
-  }
-
-  const handleSpeedChange = () => {
-    const speeds = [1.0, 2.0, 3.0]
-    const idx = speeds.indexOf(speedMultiplier)
-    const next = speeds[(idx + 1) % speeds.length]
-    setSpeedMultiplier(next)
-    speedMultiplierRef.current = next
-  }
-
-  const handleClearAll = () => {
-    if (testing) return // 测试中不允许清除
-    setPlacedNodes([])
-    setConnections([])
-  }
-
-  const handleSave = (): void => {
-    const saveData = {
-      connections,
-      placedNodes,
-      timestamp: Date.now()
-    }
-    localStorage.setItem(LEVEL1_SAVE_KEY, JSON.stringify(saveData))
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
-  }
-
-  const handleTest = () => {
-    if (testing) {
-      // 停止测试
-      setTesting(false)
-      if (animFrameRef.current) {
-        cancelAnimationFrame(animFrameRef.current)
-        animFrameRef.current = null
-      }
-      if (timerRef.current) {
-        clearInterval(timerRef.current)
-        timerRef.current = null
-      }
-      setTestParticles([])
-      return
-    }
-    
-    // 开始测试
-    setTesting(true)
-    setTargetProgress([0, 0, 0, 0])
-    setTargetAccuracy([0, 0, 0, 0])
-    setElapsed(0)
-    
-    // 初始化节点状态
-    const nodeStates: Record<string, { queue: number[]; processing: boolean; nextOutput: 1 | 2 }> = {}
-    placedNodes.forEach(node => {
-      nodeStates[node.id] = { queue: [], processing: false, nextOutput: 1 }
-    })
-    nodeStateRef.current = nodeStates
-    
-    // 初始化目标统计
-    const targetStats = {
-      0: { total: 0, correct: 0 },
-      1: { total: 0, correct: 0 },
-      2: { total: 0, correct: 0 },
-      3: { total: 0, correct: 0 }
-    }
-    
-    // 启动计时器（显示真实经过的秒数）
-    elapsedRef.current = 0
-    timerRef.current = setInterval(() => {
-      elapsedRef.current += 1
-      setElapsed(elapsedRef.current)
-    }, 1000)
-    
-    // 创建50个红色方块
-    const particles: Particle[] = []
-    let particleId = 0
-    
-    // 保存待发送的数据
-    const colorQueueRef = { remaining: 50, sent: 0 }
-    
-    // 从input-out开始的连接
-    const inputConn = connections.find(c => c.from === 'input-out')
-    if (inputConn) {
-      // 初始只创建前10个粒子，避免一次性涌入
-      for (let i = 0; i < Math.min(10, 50); i++) {
-        particles.push({
-          id: particleId++,
-          color: '#ef4444',
-          from: inputConn.from,
-          to: inputConn.to,
-          progress: -(i * 0.1), // 增加间隔
-          speed: 0.008, // 基础速度，提高到0.008使流动更快
-          done: false
-        })
-      }
-      colorQueueRef.sent = Math.min(10, 50)
-    }
-    
-    setTestParticles(particles)
-    
-    // 动画循环
-    const animate = () => {
-      setTestParticles(prev => {
-        const next = [...prev]
-        let hasChanges = false
-        
-        // 检查是否需要从输入流补充新粒子
-        const inputConn = connections.find(c => c.from === 'input-out')
-        if (inputConn && colorQueueRef.sent < colorQueueRef.remaining) {
-          // 检查当前从input-out出发的粒子数量
-          const inputParticles = next.filter(p => p.from === 'input-out' && !p.done)
-          // 如果少于5个，补充新粒子
-          if (inputParticles.length < 5) {
-            const toAdd = Math.min(3, colorQueueRef.remaining - colorQueueRef.sent)
-            for (let i = 0; i < toAdd; i++) {
-              next.push({
-                id: particleId++,
-                color: '#ef4444',
-                from: inputConn.from,
-                to: inputConn.to,
-                progress: -0.1,
-                speed: 0.008, // 基础速度，提高到0.008使流动更快
-                done: false
-              })
-            }
-            colorQueueRef.sent += toAdd
-            hasChanges = true
-          }
-        }
-        
-        // 更新所有粒子
-        for (let i = 0; i < next.length; i++) {
-          const p = next[i]
-          if (p.done) continue
-          
-          // 检查粒子是否被阻塞
-          let isBlocked = false
-          if (p.progress >= 0.95 && p.progress < 1 && p.to.endsWith('-in')) {
-            const nodeId = p.to.replace('-in', '')
-            const nodeState = nodeStateRef.current[nodeId]
-            const node = placedNodes.find(n => n.id === nodeId)
-            if (node && nodeState) {
-              // 如果节点队列已满，粒子保持阻塞
-              if (nodeState.queue.length >= node.maxCapacity) {
-                isBlocked = true
-              }
-            }
-          }
-          
-          // 移动粒子（使用当前倍速）
-          if (p.progress < 1 && !isBlocked) {
-            p.progress += p.speed * speedMultiplierRef.current
-            hasChanges = true
-          }
-          
-          // 粒子到达终点
-          if (p.progress >= 1 && !p.done) {
-            p.done = true
-            hasChanges = true
-            
-            // 检查是否到达目标
-            const targetMatch = p.to.match(/^target(\d+)-in$/)
-            if (targetMatch) {
-              const targetIdx = parseInt(targetMatch[1]) - 1
-              
-              // 更新统计
-              targetStats[targetIdx].total++
-              if (p.color === '#ef4444') {
-                targetStats[targetIdx].correct++
-              }
-              
-              // 更新进度
-              setTargetProgress(prev => {
-                const newProgress = [...prev]
-                newProgress[targetIdx] = targetStats[targetIdx].total
-                return newProgress
-              })
-              
-              // 更新准确率
-              setTargetAccuracy(prev => {
-                const newAccuracy = [...prev]
-                const stats = targetStats[targetIdx]
-                newAccuracy[targetIdx] = stats.total > 0 ? (stats.correct / stats.total) * 100 : 0
-                return newAccuracy
-              })
-              
-              // 实时检查通关条件：所有4个目标都有至少8个方块且准确率100%
-              const allTargetsComplete = Object.values(targetStats).every(s => s.total >= 8 && (s.correct / s.total) === 1)
-              
-              if (allTargetsComplete) {
-                console.log('Level1 通关！', { 
-                  rewardClaimed: rewardClaimed.current,
-                  targetStats 
-                })
-                
-                // 立即停止测试
-                if (timerRef.current) {
-                  clearInterval(timerRef.current)
-                  timerRef.current = null
-                }
-                
-                // 先更新状态
-                setTesting(false)
-                
-                // 发放金币奖励
-                // 注释掉"只能一次"的检查，用于测试
-                // if (!rewardClaimed.current) {
-                  if (!rewardClaimed.current) {
-                    rewardClaimed.current = true
-                    localStorage.setItem(LEVEL1_REWARD_KEY, '1')
-                    const newCoins = parseInt(localStorage.getItem(COINS_KEY) || '0') + 150
-                    localStorage.setItem(COINS_KEY, String(newCoins))
-                    setCoins(newCoins)
-                  }
-                  
-                  // 标记关卡已通过
-                  if (!levelPassed) {
-                    localStorage.setItem(LEVEL1_PASSED_KEY, '1')
-                    setLevelPassed(true)
-                  }
-                  
-                  console.log('Level1 显示奖励弹窗')
-                  
-                  // 使用setTimeout确保状态更新后再显示奖励
-                  setTimeout(() => {
-                    setShowVictory(true)
-                    setShowReward(true)
-                    console.log('Level1 奖励状态已设置')
-                    setTimeout(() => setShowReward(false), 3000)
-                  }, 100)
-                // }
-                
-                // 标记所有粒子为完成，并返回空数组
-                return []
-              }
-            } else if (p.to.endsWith('-in')) {
-              // 到达节点输入
-              const nodeId = p.to.replace('-in', '')
-              const node = placedNodes.find(n => n.id === nodeId)
-              const nodeState = nodeStateRef.current[nodeId]
-              
-              if (nodeState && node) {
-                // 检查节点容量，如果已满则不添加
-                if (nodeState.queue.length < node.maxCapacity) {
-                  nodeState.queue.push(p.id)
-                  
-                  // 更新节点负载显示
-                  setPlacedNodes(prev => prev.map(n => 
-                    n.id === nodeId ? { ...n, currentLoad: nodeState.queue.length } : n
-                  ))
-                  
-                  // 如果节点未在处理，开始处理
-                  if (!nodeState.processing && nodeState.queue.length > 0) {
-                    nodeState.processing = true
-                    
-                    const processQueue = () => {
-                      if (nodeState.queue.length > 0) {
-                        nodeState.queue.shift()
-                        
-                        // 更新节点负载显示
-                        setPlacedNodes(prev => prev.map(n => 
-                          n.id === nodeId ? { ...n, currentLoad: nodeState.queue.length } : n
-                        ))
-                        
-                        // 轮询输出
-                        const outputNum = nodeState.nextOutput
-                        nodeState.nextOutput = outputNum === 1 ? 2 : 1
-                        
-                        // 找到输出连接
-                        const outputConn = connections.find(c => c.from === `${nodeId}-out${outputNum}`)
-                        if (outputConn) {
-                          setTestParticles(current => [
-                            ...current,
-                            {
-                              id: particleId++,
-                              color: '#ef4444',
-                              from: outputConn.from,
-                              to: outputConn.to,
-                              progress: 0,
-                              speed: 0.008, // 基础速度，提高到0.008使流动更快
-                              done: false
-                            }
-                          ])
-                        }
-                        
-                        // 继续处理队列中的下一个
-                        if (nodeState.queue.length > 0) {
-                          setTimeout(processQueue, 10)
-                        } else {
-                          nodeState.processing = false
-                        }
-                      } else {
-                        nodeState.processing = false
-                      }
-                    }
-                    
-                    // 平衡器延迟5ms（减少延迟使处理更快）
-                    setTimeout(processQueue, 5)
-                  }
-                } else {
-                  // 节点已满，粒子被阻塞，保持在输入端
-                  p.progress = 0.95 // 停在输入端附近，不标记为done
-                  hasChanges = true
-                }
-              }
-            }
-          }
-        }
-        
-        // 检查是否全部完成或超时（时间限制根据倍速调整：倍速越大，时限越小）
-        // elapsed是真实秒数，elapsed * speedMultiplier 是加速后的等效时间
-        const timeLimit = 40
-        const effectiveElapsed = elapsedRef.current * speedMultiplierRef.current
-        const allParticlesDone = next.every(p => p.done)
-        const allQueuesEmpty = Object.values(nodeStateRef.current).every(s => s.queue.length === 0 && !s.processing)
-        
-        if ((allParticlesDone && allQueuesEmpty) || effectiveElapsed >= timeLimit) {
-          setTesting(false)
-          if (timerRef.current) clearInterval(timerRef.current)
-          
-          // 检查是否超时
-          if (effectiveElapsed >= timeLimit) {
-            setShowTimeout(true)
-          } else {
-            // 所有粒子完成但未通关（通关成功已在实时检查中处理）
-            const allTargetsComplete = Object.values(targetStats).every(s => s.total >= 8 && (s.correct / s.total) === 1)
-            if (!allTargetsComplete) {
-              setShowTimeout(true)
-            }
-          }
-          
-          return next
-        }
-        
-        // 继续动画循环
-        animFrameRef.current = requestAnimationFrame(animate)
-        
-        return next
-      })
-    }
-    
-    animFrameRef.current = requestAnimationFrame(animate)
-  }
-
-  const renderTestParticles = () => {
-    return testParticles.map(p => {
-      if (p.progress < 0 || p.done) return null
-      const from = getDotCenter(p.from)
-      const to = getDotCenter(p.to)
-      if (!from || !to) return null
-      const t = Math.min(Math.max(p.progress, 0), 1)
-      const x = from.x + (to.x - from.x) * t - 4
-      const y = from.y + (to.y - from.y) * t - 4
-      return <rect key={p.id} x={x} y={y} width="8" height="8" fill={p.color} rx="2" opacity="0.9" />
-    })
-  }
-
+const Level2CopyPage: React.FC<Level2CopyPageProps> = ({ onBack, onNextLevel }) => {
   const particles = React.useMemo(() => {
-    const binaries = ['0', '1', '01', '10', '001', '101', '110', '011', '100', '111']
+    const binaries = ['0', '1', '01', '10', '001', '101', '110', '011', '100', '111', '0101', '1010', '1100', '0011']
     return Array.from({ length: 15 }, (_, i) => ({
       id: i,
       content: binaries[Math.floor(Math.random() * binaries.length)],
@@ -734,451 +52,705 @@ const Level1Page: React.FC<Level1PageProps> = ({ onBack, onNextLevel }) => {
     }))
   }, [])
 
-  return (
-    <div 
-      ref={pageRef}
-      className="level-base level1-page" 
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      style={{ cursor: draggingNode || draggingPlacedNode ? 'grabbing' : 'default' }}
-    >
-      <div className="bg-blur-layer" style={{ backgroundImage: `url(${levelBg})` }} />
+  const savedState: SavedState | null = React.useMemo(() => {
+    try {
+      const saved = localStorage.getItem(SAVE_KEY)
+      if (saved) {
+        const data = JSON.parse(saved)
+        // 确保所有节点都有有效的pos属性
+        if (data.placedNodes) {
+          data.placedNodes = data.placedNodes.map((node: PlacedNode) => {
+            if (!node.pos || typeof node.pos.x !== 'number' || typeof node.pos.y !== 'number') {
+              // 如果pos无效，使用默认位置
+              return {
+                ...node,
+                pos: { x: 400, y: 300 }
+              }
+            }
+            return node
+          })
+        }
+        return data
+      }
+      return null
+    } catch {
+      return null
+    }
+  }, [])
+
+  const [pos, setPos] = useState(savedState?.pos ?? { x: 400, y: 300 })
+  const [connections, setConnections] = useState<Connection[]>(savedState?.connections ?? [])
+  const [placedNodes, setPlacedNodes] = useState<PlacedNode[]>(savedState?.placedNodes ?? [])
+  const [draggingLine, setDraggingLine] = useState<{ fromId: string; mouse: Point } | null>(null)
+  const [saved, setSaved] = useState(false)
+  const [testing, setTesting] = useState(false)
+  const [testParticles, setTestParticles] = useState<Particle[]>([])
+  const [speedMultiplier, setSpeedMultiplier] = useState(1.0)
+  const [targetProgress, setTargetProgress] = useState(0)
+  const [noTargetProgress, setNoTargetProgress] = useState(0)
+  const [elapsed, setElapsed] = useState(0)
+  const [coins, setCoins] = useState(() => parseInt(localStorage.getItem(COINS_KEY) || '0'))
+  const [showReward, setShowReward] = useState(false)
+  const [testResult, setTestResult] = useState<'pass' | 'fail' | null>(null)
+  const [passed, setPassed] = useState(() => !!localStorage.getItem(TUTORIAL_PASSED_KEY))
+  const everPassed = React.useRef(!!localStorage.getItem(TUTORIAL_PASSED_KEY))
+  const [infoModal, setInfoModal] = useState<'input' | 'classifier' | null>(null)
+  const [showHiddenLevel, setShowHiddenLevel] = useState(false)
+  const [draggingFromLibrary, setDraggingFromLibrary] = useState<DraggingNodeState | null>(null)
+  const [draggingPlacedNode, setDraggingPlacedNode] = useState<{ nodeId: string; offsetX: number; offsetY: number } | null>(null)
+  const [hiddenParams, setHiddenParams] = useState<TrainingParams>(() => {
+    try {
+      const saved = localStorage.getItem(HIDDEN_PARAMS_KEY)
+      return saved ? JSON.parse(saved) : {
+        learningRate: 0.01,
+        batchSize: 16,
+        epochs: 10,
+        optimizer: 'SGD'
+      }
+    } catch {
+      return {
+        learningRate: 0.01,
+        batchSize: 16,
+        epochs: 10,
+        optimizer: 'SGD'
+      }
+    }
+  })
+  
+  // 检查连接是否正确
+  const isConnectionCorrect = React.useMemo(() => {
+    const out1Conn = connections.find(c => c.from === 'classifier-out1')
+    const out2Conn = connections.find(c => c.from === 'classifier-out2')
+    const out1IsCorrect = out1Conn?.to === 'target-in'
+    const out2IsCorrect = out2Conn?.to === 'no-target-in'
+    return out1IsCorrect && out2IsCorrect
+  }, [connections])
+  
+  const rewardClaimed = React.useRef(!!localStorage.getItem(TUTORIAL_REWARD_KEY))
+  const totalRef = useRef({ red: 0, blue: 0 })
+  const speedMultiplierRef = useRef(1.0)
+  const animFrameRef = useRef<number | null>(null)
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const [, forceUpdate] = useState(0)
+  const pageRef = useRef<HTMLDivElement>(null)
+  const sidebarRef = useRef<HTMLDivElement>(null)
+
+  // DOM 渲染完后强制重绘连线
+  useEffect(() => {
+    const timer = setTimeout(() => forceUpdate(n => n + 1), 100)
+    return () => clearTimeout(timer)
+  }, [])
+
+  const dotRefs = useRef<Record<string, HTMLDivElement | null>>({})
+
+  const getDotCenter = useCallback((id: string): Point | null => {
+    const el = dotRefs.current[id]
+    if (!el) return null
+    const rect = el.getBoundingClientRect()
+    return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
+  }, [])
+
+  const onDotMouseDown = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation()
+    const center = getDotCenter(id)
+    if (!center) return
+    setDraggingLine({ fromId: id, mouse: center })
+    e.preventDefault()
+  }
+
+  const onDotMouseUp = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation()
+    if (!draggingLine) return
+    const from = draggingLine.fromId
+    if (from === id) { setDraggingLine(null); return }
+    const rules: Record<string, string[]> = {
+      'input-out': ['classifier-in'],
+      'classifier-out1': ['target-in', 'no-target-in'],
+      'classifier-out2': ['target-in', 'no-target-in'],
+    }
+    const allowed = rules[from]
+    if (!allowed || !allowed.includes(id)) { setDraggingLine(null); return }
+    setConnections(prev => [...prev.filter(c => c.from !== from && c.to !== id), { from, to: id }])
+    setDraggingLine(null)
+  }
+
+  const onMouseMove = (e: React.MouseEvent) => {
+    if (draggingLine)
+      setDraggingLine(prev => prev ? { ...prev, mouse: { x: e.clientX, y: e.clientY } } : null)
+    if (draggingFromLibrary) {
+      // 只更新拖拽状态，不更新节点位置（因为节点还没添加）
+      setDraggingFromLibrary({ ...draggingFromLibrary, mouseX: e.clientX, mouseY: e.clientY })
+    }
+    if (draggingPlacedNode && pageRef.current) {
+      const rect = pageRef.current.getBoundingClientRect()
+      const x = e.clientX - rect.left - draggingPlacedNode.offsetX
+      const y = e.clientY - rect.top - draggingPlacedNode.offsetY
       
-      {/* SVG overlay for lines */}
-      <svg
-        style={{
-          position: 'fixed',
-          inset: 0,
-          width: '100vw',
-          height: '100vh',
-          pointerEvents: 'none',
-          zIndex: 50
-        }}
-      >
+      // 更新placedNodes中的位置
+      setPlacedNodes(prev => prev.map(n => 
+        n.id === 'classifier' ? { ...n, pos: { x, y } } : n
+      ))
+    }
+  }
+
+  const onMouseUp = useCallback((e: React.MouseEvent) => {
+    if (draggingFromLibrary && pageRef.current) {
+      const rect = pageRef.current.getBoundingClientRect()
+      const mouseX = e.clientX - rect.left
+      const mouseY = e.clientY - rect.top
+      
+      // 检查是否在有效区域（不在侧边栏内）
+      if (sidebarRef.current) {
+        const sidebarRect = sidebarRef.current.getBoundingClientRect()
+        if (e.clientX < sidebarRect.left && mouseX > 160 && mouseY > 0 && mouseY < rect.height) {
+          const existingNode = placedNodes.find((n) => n.type === 'classifier')
+          
+          if (!existingNode) {
+            // 在鼠标位置添加节点
+            const newNode: PlacedNode = {
+              id: 'classifier',
+              type: 'classifier',
+              pos: { x: mouseX, y: mouseY }
+            }
+            setPlacedNodes([...placedNodes, newNode])
+          }
+        }
+      }
+      setDraggingFromLibrary(null)
+    } else if (draggingPlacedNode) {
+      // 检查是否拖回侧边栏删除
+      if (sidebarRef.current) {
+        const sidebarRect = sidebarRef.current.getBoundingClientRect()
+        if (e.clientX >= sidebarRect.left) {
+          // 删除节点
+          setPlacedNodes(prev => prev.filter(n => n.id !== 'classifier'))
+          
+          // 删除与该节点相关的所有连接线
+          setConnections(prev => prev.filter(conn => {
+            return !conn.from.startsWith('classifier-') && !conn.to.startsWith('classifier-')
+          }))
+        }
+      }
+      setDraggingPlacedNode(null)
+    }
+    
+    setDraggingLine(null)
+  }, [draggingFromLibrary, draggingPlacedNode, placedNodes])
+
+  const handleLibraryNodeDragStart = (e: React.MouseEvent) => {
+    const existingNode = placedNodes.find(n => n.type === 'classifier')
+    if (existingNode) return // 已经放置过，不能再拖
+    
+    e.preventDefault()
+    setDraggingFromLibrary({ type: 'classifier', mouseX: e.clientX, mouseY: e.clientY })
+  }
+
+  const handlePlacedNodeMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    
+    const node = placedNodes.find(n => n.id === 'classifier')
+    if (!node || !pageRef.current) return
+
+    const rect = pageRef.current.getBoundingClientRect()
+    
+    // 计算鼠标相对于节点的偏移
+    const offsetX = e.clientX - rect.left - node.pos.x
+    const offsetY = e.clientY - rect.top - node.pos.y
+    
+    setDraggingPlacedNode({ nodeId: 'classifier', offsetX, offsetY })
+  }
+
+  const handleSave = () => {
+    localStorage.setItem(SAVE_KEY, JSON.stringify({ connections, pos, placedNodes }))
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
+  }
+
+  const handleClearLines = () => setConnections([])
+
+  // 启动测试
+  const handleTest = () => {
+    if (testing) return
+    setTesting(true)
+    setTargetProgress(0)
+    setNoTargetProgress(0)
+    setElapsed(0)
+
+    // 启动计时器
+    timerRef.current = setInterval(() => setElapsed(e => e + 1), 1000)
+
+    const inputConn = connections.find(c => c.from === 'input-out')
+    const out1Conn = connections.find(c => c.from === 'classifier-out1')
+    const out2Conn = connections.find(c => c.from === 'classifier-out2')
+
+    // 判断连接是否正确
+    // classifier-out1 连 target-in = 正确，连 no-target-in = 错误
+    // classifier-out2 连 no-target-in = 正确，连 target-in = 错误
+    const out1IsCorrect = out1Conn?.to === 'target-in'
+    const out2IsCorrect = out2Conn?.to === 'no-target-in'
+
+    // 根据隐藏参数调整准确率
+    const accuracyBonus = calculateAccuracyBonus()
+    const baseCorrectRatio = 0.75 + accuracyBonus // 基础75%，可通过隐藏参数提升或降低
+    const baseWrongRatio = 1 - baseCorrectRatio
+
+    // 计算每条线的正确和错误数量
+    const out1Correct = Math.round(20 * baseCorrectRatio)
+    const out1Wrong = 20 - out1Correct
+    const out2Correct = Math.round(20 * baseCorrectRatio)
+    const out2Wrong = 20 - out2Correct
+
+    totalRef.current = { red: out1Correct, blue: out2Correct }
+
+    let id = 0
+    const particles: Particle[] = []
+
+    // 左边：红蓝各20随机混合
+    if (inputConn) {
+      const inputColors = [...Array(20).fill('#ef4444'), ...Array(20).fill('#3b82f6')].sort(() => Math.random() - 0.5)
+      inputColors.forEach((color, i) => {
+        particles.push({ id: id++, color, from: inputConn.from, to: inputConn.to, progress: -(i * 0.1), speed: 0.003, done: false })
+      })
+    }
+
+    const rightDelay = -0.5
+    // out1 连线：正确时使用计算的比例，错误时反转
+    if (out1Conn) {
+      const correctCount = out1IsCorrect ? out1Correct : out1Wrong
+      const wrongCount = out1IsCorrect ? out1Wrong : out1Correct
+      const mainColor = out1IsCorrect ? '#ef4444' : '#3b82f6'
+      const wrongColor = out1IsCorrect ? '#3b82f6' : '#ef4444'
+      const out1Colors = [...Array(correctCount).fill(mainColor), ...Array(wrongCount).fill(wrongColor)].sort(() => Math.random() - 0.5)
+      out1Colors.forEach((color, i) => {
+        particles.push({ id: id++, color, from: out1Conn.from, to: out1Conn.to, progress: rightDelay - i * 0.15, speed: 0.003, done: false })
+      })
+    }
+    // out2 连线：正确时使用计算的比例，错误时反转
+    if (out2Conn) {
+      const correctCount = out2IsCorrect ? out2Correct : out2Wrong
+      const wrongCount = out2IsCorrect ? out2Wrong : out2Correct
+      const mainColor = out2IsCorrect ? '#3b82f6' : '#ef4444'
+      const wrongColor = out2IsCorrect ? '#ef4444' : '#3b82f6'
+      const out2Colors = [...Array(correctCount).fill(mainColor), ...Array(wrongCount).fill(wrongColor)].sort(() => Math.random() - 0.5)
+      out2Colors.forEach((color, i) => {
+        particles.push({ id: id++, color, from: out2Conn.from, to: out2Conn.to, progress: rightDelay - i * 0.15, speed: 0.003, done: false })
+      })
+    }
+
+    setTestParticles(particles)
+
+    const animate = () => {
+      setTestParticles(prev => {
+        const next = prev.map(p => {
+          const newProgress = p.progress + p.speed * speedMultiplierRef.current
+          return { ...p, progress: newProgress, done: newProgress >= 1 }
+        })
+
+        // 柱状图：用已出发方块数/总数，每出发一个方块涨一格，完全匀速
+        const rightAll = next.filter(p => p.from === 'classifier-out1' || p.from === 'classifier-out2')
+        const rightTotal = rightAll.length || 1
+        const rightStarted = rightAll.filter(p => p.progress > 0).length
+        const ratio = rightStarted / rightTotal
+
+        setTargetProgress(Math.min(ratio * (out1IsCorrect ? baseCorrectRatio : baseWrongRatio), out1IsCorrect ? baseCorrectRatio : baseWrongRatio))
+        setNoTargetProgress(Math.min(ratio * (out2IsCorrect ? baseCorrectRatio : baseWrongRatio), out2IsCorrect ? baseCorrectRatio : baseWrongRatio))
+
+        // 右边两条线都完成后，左边停止
+        const rightParticles = next.filter(p => p.from === 'classifier-out1' || p.from === 'classifier-out2')
+        const rightDone = rightParticles.length > 0 && rightParticles.every(p => p.done)
+        const final = next.map(p =>
+          rightDone && p.from === 'input-out' ? { ...p, done: true } : p
+        )
+
+        if (final.every(p => p.done)) {
+          setTesting(false)
+          const isPass = out1IsCorrect && out2IsCorrect && baseCorrectRatio >= 0.75
+          const finalAccuracy = Math.max(
+            out1IsCorrect ? baseCorrectRatio : baseWrongRatio,
+            out2IsCorrect ? baseCorrectRatio : baseWrongRatio
+          )
+          setTargetProgress(out1IsCorrect ? baseCorrectRatio : baseWrongRatio)
+          setNoTargetProgress(out2IsCorrect ? baseCorrectRatio : baseWrongRatio)
+          if (timerRef.current) clearInterval(timerRef.current)
+          
+          // 检查反向工程师成就（连接错误且准确率≤10%）
+          const isConnectionWrong = !out1IsCorrect || !out2IsCorrect
+          if (isConnectionWrong && finalAccuracy <= 0.10) {
+            const achievementKey = 'achievement_reverse_engineer'
+            if (!localStorage.getItem(achievementKey)) {
+              localStorage.setItem(achievementKey, '1')
+              console.log('🎉 成就解锁：反向工程师 - 连接错误时达到最低准确率')
+              
+              // 触发成就解锁动画
+              const event = new CustomEvent('achievement-unlocked', {
+                detail: {
+                  name: '反向工程师',
+                  desc: '在连接错误时达到极低准确率（≤10%）',
+                  icon: 'achievement-8.png'
+                }
+              })
+              window.dispatchEvent(event)
+            }
+          }
+          
+          // 已通关过：不再弹任何结果弹窗
+          if (!everPassed.current) {
+            if (isPass) {
+              everPassed.current = true
+              localStorage.setItem(TUTORIAL_PASSED_KEY, '1')
+              setPassed(true)
+              setTestResult('pass')
+            } else {
+              setTestResult('fail')
+            }
+          } else {
+            // 已通关过，静默更新 passed 状态
+            if (isPass) setPassed(true)
+          }
+          // 发放金币奖励（只能一次）
+          if (isPass && !rewardClaimed.current) {
+            rewardClaimed.current = true
+            localStorage.setItem(TUTORIAL_REWARD_KEY, '1')
+            const newCoins = parseInt(localStorage.getItem(COINS_KEY) || '0') + 100
+            localStorage.setItem(COINS_KEY, String(newCoins))
+            setCoins(newCoins)
+            setShowReward(true)
+            setTimeout(() => setShowReward(false), 3000)
+          }
+          return []
+        }
+        animFrameRef.current = requestAnimationFrame(animate)
+        return final
+      })
+    }
+    animFrameRef.current = requestAnimationFrame(animate)
+  }
+
+  const speeds = [0.5, 1.0, 1.5, 2.0]
+  const handleSpeedChange = () => {
+    const idx = speeds.indexOf(speedMultiplier)
+    const next = speeds[(idx + 1) % speeds.length]
+    setSpeedMultiplier(next)
+    speedMultiplierRef.current = next
+  }
+
+  useEffect(() => {
+    return () => {
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current)
+      if (timerRef.current) clearInterval(timerRef.current)
+    }
+  }, [])
+  const getLineColors = (from: string, to: string): string[] => {
+    if (from === 'input-out') return ['#ef4444', '#3b82f6']
+    if (to === 'target-in') return ['#ef4444']
+    if (to === 'no-target-in') return ['#3b82f6']
+    return []
+  }
+
+  const renderLines = () => connections.map((conn, i) => {
+    const from = getDotCenter(conn.from)
+    const to = getDotCenter(conn.to)
+    if (!from || !to) return null
+    return (
+      <g key={i}>
+        <line x1={from.x} y1={from.y} x2={to.x} y2={to.y} stroke="#4ade80" strokeWidth="2.5" strokeLinecap="round" />
+      </g>
+    )
+  })
+
+  const renderTestParticles = () => testParticles.map(p => {
+    if (p.progress < 0 || p.done) return null
+    const from = getDotCenter(p.from)
+    const to = getDotCenter(p.to)
+    if (!from || !to) return null
+    const t = Math.min(p.progress, 1)
+    const x = from.x + (to.x - from.x) * t - 4
+    const y = from.y + (to.y - from.y) * t - 4
+    return <rect key={p.id} x={x} y={y} width="8" height="8" fill={p.color} rx="2" opacity="0.9" />
+  })
+
+  const renderDraggingLine = () => {
+    if (!draggingLine) return null
+    const from = getDotCenter(draggingLine.fromId)
+    if (!from) return null
+    return <line x1={from.x} y1={from.y} x2={draggingLine.mouse.x} y2={draggingLine.mouse.y} stroke="#4ade80" strokeWidth="2.5" strokeLinecap="round" strokeDasharray="6 3" />
+  }
+
+  const setDotRef = (id: string) => (el: HTMLDivElement | null) => { dotRefs.current[id] = el }
+
+  // 隐藏关卡训练逻辑
+  const handleHiddenTrain = async (params: TrainingParams): Promise<number> => {
+    // 根据参数计算准确率
+    // 最优参数组合：learningRate=0.1, batchSize=32, epochs=20, optimizer=Adam
+    let accuracy = 70 // 基础准确率
+    
+    if (params.learningRate === 0.1) accuracy += 8
+    else if (params.learningRate === 0.001) accuracy -= 3
+    
+    if (params.batchSize === 32) accuracy += 6
+    else if (params.batchSize === 8) accuracy -= 3
+    
+    if (params.epochs === 20) accuracy += 6
+    else if (params.epochs === 5) accuracy -= 3
+    
+    if (params.optimizer === 'Adam') accuracy += 8
+    else if (params.optimizer === 'SGD') accuracy -= 3
+    
+    // 添加随机波动
+    accuracy += Math.random() * 2 - 1
+    
+    return Math.min(Math.max(accuracy, 60), 95)
+  }
+
+  // 保存隐藏关卡参数
+  const handleSaveHiddenParams = (params: TrainingParams) => {
+    setHiddenParams(params)
+    localStorage.setItem(HIDDEN_PARAMS_KEY, JSON.stringify(params))
+  }
+
+  // 根据隐藏参数计算准确率加成
+  const calculateAccuracyBonus = (): number => {
+    let bonus = 0
+    
+    if (hiddenParams.learningRate === 0.1) bonus += 0.04
+    else if (hiddenParams.learningRate === 0.001) bonus -= 0.05
+    
+    if (hiddenParams.batchSize === 32) bonus += 0.04
+    else if (hiddenParams.batchSize === 8) bonus -= 0.05
+    
+    if (hiddenParams.epochs === 20) bonus += 0.04
+    else if (hiddenParams.epochs === 5) bonus -= 0.05
+    
+    if (hiddenParams.optimizer === 'Adam') bonus += 0.08
+    else if (hiddenParams.optimizer === 'SGD') bonus -= 0.05
+    
+    // 限制最大加成，使最高准确率为95%
+    return Math.min(bonus, 0.20)
+  }
+
+  return (
+    <div ref={pageRef} className="level-base level1-tutorial-page" onMouseMove={onMouseMove} onMouseUp={onMouseUp}>
+      <div className="bg-blur-layer" style={{ backgroundImage: `url(${levelBg})` }} />
+
+      <svg style={{ position: 'fixed', inset: 0, width: '100vw', height: '100vh', pointerEvents: 'none', zIndex: 50 }}>
         {renderLines()}
         {renderTestParticles()}
         {renderDraggingLine()}
       </svg>
-      
+
       <div className="particles-container">
         {particles.map((particle) => (
-          <div
-            key={particle.id}
-            className={`particle ${particle.size}`}
-            style={{
-              left: `${particle.left}%`,
-              top: `${particle.top}%`,
-              animationDuration: `${particle.animationDuration}s`,
-              animationDelay: `${particle.animationDelay}s`
-            }}
-          >
+          <div key={particle.id} className={`particle ${particle.size}`}
+            style={{ left: `${particle.left}%`, top: `${particle.top}%`, animationDuration: `${particle.animationDuration}s`, animationDelay: `${particle.animationDelay}s` }}>
             {particle.content}
           </div>
         ))}
       </div>
 
       <button className="back-button" onClick={onBack}>← 返回</button>
-      
-      <div className="node-counter">{placedNodes.length}/3</div>
+
+      {/* 隐藏关卡按钮 - 左下角 */}
+      <button className="hidden-level-btn" onClick={() => setShowHiddenLevel(true)} title="隐藏关卡">
+        🔬
+      </button>
+
+      {/* 金币显示 */}
       <div className="coins-display">🪙 {coins}</div>
 
-      {/* 缩放指示器 */}
-      <div className="zoom-indicator">
-        <span>🔍 {Math.round(zoom * 100)}%</span>
-        {zoom !== 1.0 && (
-          <button className="zoom-reset-btn" onClick={resetZoom}>
-            重置
-          </button>
-        )}
-      </div>
-
-      {/* 速度控制按钮 */}
-      <button className="speed-btn" onClick={handleSpeedChange}>
-        ▶▶ {speedMultiplier.toFixed(1)}x
-      </button>
-
-      {/* 清除按钮 - 垃圾桶样式 */}
-      <button 
-        className="level1-clear-btn" 
-        onClick={handleClearAll}
-        disabled={testing}
-        title="清除所有节点和连接"
-      >
-        🗑️
-      </button>
-
-      {/* 超时弹窗 */}
-      {showTimeout && (
-        <div className="timeout-overlay" onClick={() => setShowTimeout(false)}>
-          <div className="timeout-modal" onClick={e => e.stopPropagation()}>
-            <div className="timeout-icon">⏰</div>
-            <div className="timeout-title">超时了</div>
-            <div className="timeout-text">请重新尝试</div>
-            <button className="timeout-btn" onClick={() => setShowTimeout(false)}>
-              确定
-            </button>
-          </div>
-        </div>
-      )}
+      {/* 节点计数器 */}
+      <div className="node-counter">{1 - placedNodes.length}/1</div>
 
       {/* 奖励弹窗 */}
       {showReward && (
         <div className="reward-popup">
           <div className="reward-icon">🎉</div>
-          <div className="reward-text">第三关完成！</div>
-          <div className="reward-coins">+150 🪙</div>
+          <div className="reward-text">新手任务完成！</div>
+          <div className="reward-coins">+100 🪙</div>
         </div>
       )}
 
-      {/* 下一关按钮 - 一直显示 */}
-      {console.log('Level1 按钮渲染检查:', { levelPassed, onNextLevel: !!onNextLevel, shouldShow: levelPassed && !!onNextLevel })}
-      {onNextLevel && (
-        <button className="level1-next-level-btn" onClick={onNextLevel}>
-          下一关 →
-        </button>
-      )}
+      {/* 垃圾桶 */}
+      <button className="trash-btn" onClick={handleClearLines} title="清除所有连线">🗑️</button>
+
+      {/* 下一关 - 只有达标才显示 */}
+      {passed && <button className="next-level-btn" onClick={onNextLevel}>下一关 →</button>}
+
+      {/* 速度控制 */}
+      <button className="speed-btn" onClick={handleSpeedChange}>
+        ▶▶ {speedMultiplier.toFixed(1)}x
+      </button>
 
       {/* 计时器 */}
       {(testing || elapsed > 0) && (
-        <div style={{
-          position: 'fixed',
-          top: '20px',
-          left: '280px',
-          background: 'rgba(0, 0, 0, 0.7)',
-          color: '#fff',
-          padding: '8px 16px',
-          borderRadius: '8px',
-          fontSize: '18px',
-          fontWeight: 'bold',
-          zIndex: 100
-        }}>
-          ⏱ {Math.floor(elapsed / 60).toString().padStart(2, '0')}:{(elapsed % 60).toString().padStart(2, '0')} / {Math.floor(40 / speedMultiplier / 60).toString().padStart(2, '0')}:{Math.floor(40 / speedMultiplier % 60).toString().padStart(2, '0')}
+        <div className="timer-display">
+          ⏱ {Math.floor(elapsed / 60).toString().padStart(2, '0')}:{(elapsed % 60).toString().padStart(2, '0')}
         </div>
       )}
 
+      {/* 左边 - 输入图 */}
       <div className="left-panel">
         <div className="img-with-dot">
-          <div style={{ position: 'relative', display: 'inline-block', transform: `scale(${zoom})`, transformOrigin: 'center center' }}>
-            <img src={level3Input} alt="输入数据" className="input-img" draggable={false} />
-            <button className="info-btn" onClick={() => setInfoModal('input')}>i</button>
-            <div
-              ref={setDotRef('input-out')}
-              className="dot dot-right"
-              onMouseDown={(e) => onDotMouseDown(e, 'input-out')}
-              onMouseUp={(e) => onDotMouseUp(e, 'input-out')}
-            />
-          </div>
-        </div>
-      </div>
-
-      <div className="target-panel-4">
-        <div className="img-with-dot">
-          <div className="img-bar-wrapper" style={{ transform: `scale(${zoom})`, transformOrigin: 'center center' }}>
-            <div
-              ref={setDotRef('target1-in')}
-              className="dot dot-left"
-              onMouseDown={(e) => onDotMouseDown(e, 'target1-in')}
-              onMouseUp={(e) => onDotMouseUp(e, 'target1-in')}
-            />
-            <img src={targetImg} alt="目标1" className="target-img-small" draggable={false} />
-            <button className="info-btn" onClick={() => setInfoModal('output')}>i</button>
-            <div className="target-bars">
-              <div className="target-bar-item">
-                <span className="bar-label-small">数量</span>
-                <div className="bar-track-small">
-                  <div className="bar-fill-small bar-green" style={{ height: `${(targetProgress[0] / 8) * 100}%` }} />
-                </div>
-                <span className="bar-value-small">{targetProgress[0]}/8</span>
-              </div>
-              <div className="target-bar-item">
-                <span className="bar-label-small">准确率</span>
-                <div className="bar-track-small">
-                  <div className="bar-fill-small bar-blue" style={{ height: `${targetAccuracy[0]}%` }} />
-                </div>
-                <span className="bar-value-small">{targetAccuracy[0].toFixed(0)}%</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="img-with-dot">
-          <div className="img-bar-wrapper" style={{ transform: `scale(${zoom})`, transformOrigin: 'center center' }}>
-            <div
-              ref={setDotRef('target2-in')}
-              className="dot dot-left"
-              onMouseDown={(e) => onDotMouseDown(e, 'target2-in')}
-              onMouseUp={(e) => onDotMouseUp(e, 'target2-in')}
-            />
-            <img src={targetImg} alt="目标2" className="target-img-small" draggable={false} />
-            <div className="target-bars">
-              <div className="target-bar-item">
-                <span className="bar-label-small">数量</span>
-                <div className="bar-track-small">
-                  <div className="bar-fill-small bar-green" style={{ height: `${(targetProgress[1] / 8) * 100}%` }} />
-                </div>
-                <span className="bar-value-small">{targetProgress[1]}/8</span>
-              </div>
-              <div className="target-bar-item">
-                <span className="bar-label-small">准确率</span>
-                <div className="bar-track-small">
-                  <div className="bar-fill-small bar-blue" style={{ height: `${targetAccuracy[1]}%` }} />
-                </div>
-                <span className="bar-value-small">{targetAccuracy[1].toFixed(0)}%</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="img-with-dot">
-          <div className="img-bar-wrapper" style={{ transform: `scale(${zoom})`, transformOrigin: 'center center' }}>
-            <div
-              ref={setDotRef('target3-in')}
-              className="dot dot-left"
-              onMouseDown={(e) => onDotMouseDown(e, 'target3-in')}
-              onMouseUp={(e) => onDotMouseUp(e, 'target3-in')}
-            />
-            <img src={targetImg} alt="目标3" className="target-img-small" draggable={false} />
-            <div className="target-bars">
-              <div className="target-bar-item">
-                <span className="bar-label-small">数量</span>
-                <div className="bar-track-small">
-                  <div className="bar-fill-small bar-green" style={{ height: `${(targetProgress[2] / 8) * 100}%` }} />
-                </div>
-                <span className="bar-value-small">{targetProgress[2]}/8</span>
-              </div>
-              <div className="target-bar-item">
-                <span className="bar-label-small">准确率</span>
-                <div className="bar-track-small">
-                  <div className="bar-fill-small bar-blue" style={{ height: `${targetAccuracy[2]}%` }} />
-                </div>
-                <span className="bar-value-small">{targetAccuracy[2].toFixed(0)}%</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="img-with-dot">
-          <div className="img-bar-wrapper" style={{ transform: `scale(${zoom})`, transformOrigin: 'center center' }}>
-            <div
-              ref={setDotRef('target4-in')}
-              className="dot dot-left"
-              onMouseDown={(e) => onDotMouseDown(e, 'target4-in')}
-              onMouseUp={(e) => onDotMouseUp(e, 'target4-in')}
-            />
-            <img src={targetImg} alt="目标4" className="target-img-small" draggable={false} />
-            <div className="target-bars">
-              <div className="target-bar-item">
-                <span className="bar-label-small">数量</span>
-                <div className="bar-track-small">
-                  <div className="bar-fill-small bar-green" style={{ height: `${(targetProgress[3] / 8) * 100}%` }} />
-                </div>
-                <span className="bar-value-small">{targetProgress[3]}/8</span>
-              </div>
-              <div className="target-bar-item">
-                <span className="bar-label-small">准确率</span>
-                <div className="bar-track-small">
-                  <div className="bar-fill-small bar-blue" style={{ height: `${targetAccuracy[3]}%` }} />
-                </div>
-                <span className="bar-value-small">{targetAccuracy[3].toFixed(0)}%</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 已放置的节点 */}
-      {placedNodes.map(node => (
-        <div
-          key={node.id}
-          className="placed-node"
-          style={{
-            position: 'absolute',
-            left: node.pos.x,
-            top: node.pos.y,
-            transform: `translate(-50%, -50%) scale(${zoom})`,
-            cursor: 'grab',
-            zIndex: 10,
-            transition: draggingPlacedNode?.nodeId === node.id ? 'none' : 'transform 0.1s ease'
-          }}
-          onMouseDown={(e) => handlePlacedNodeMouseDown(node.id, e)}
-          onDoubleClick={(e) => handleDeleteNode(node.id, e)}
-        >
-          {/* 输入连接点 */}
-          <div
-            ref={setDotRef(`${node.id}-in`)}
-            className="dot dot-left"
-            style={{
-              position: 'absolute',
-              left: '-8px',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              zIndex: 20
-            }}
-            onMouseDown={(e) => onDotMouseDown(e, `${node.id}-in`)}
-            onMouseUp={(e) => onDotMouseUp(e, `${node.id}-in`)}
-          />
-
           <div style={{ position: 'relative', display: 'inline-block' }}>
-            <img 
-              src={balancerImg} 
-              alt="平衡器" 
-              style={{ width: '160px', borderRadius: '8px', userSelect: 'none', pointerEvents: 'none' }} 
-              draggable={false} 
-            />
-            
-            {/* 说明按钮 */}
-            <button
-              className="info-btn"
-              style={{ position: 'absolute', top: '5px', left: '5px' }}
-              onClick={(e) => {
-                e.stopPropagation()
-                setInfoModal('balancer')
-              }}
-            >
-              i
-            </button>
+            <img src={tutorialInput} alt="教学关卡输入" className="input-img" draggable={false} />
+            <button className="info-btn" onClick={() => setInfoModal('input')}>i</button>
+          </div>
+          <div ref={setDotRef('input-out')} className="dot dot-right"
+            onMouseDown={(e) => onDotMouseDown(e, 'input-out')}
+            onMouseUp={(e) => onDotMouseUp(e, 'input-out')} />
+        </div>
+      </div>
 
-            {/* 处理时间显示 */}
-            <div style={{
-              position: 'absolute',
-              top: '5px',
-              right: '5px',
-              background: 'rgba(0, 0, 0, 0.7)',
-              borderRadius: '4px',
-              padding: '2px 6px',
-              fontSize: '10px',
-              color: '#fbbf24',
-              fontWeight: 'bold',
-              pointerEvents: 'none'
-            }}>
-              5ms
-            </div>
-
-            {/* 进度条 - 横向显示在中间靠右 */}
-            {testing && (
-              <div style={{
-                position: 'absolute',
-                right: '8px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                width: '40px',
-                height: '8px',
-                background: 'rgba(255, 255, 255, 0.2)',
-                borderRadius: '4px',
-                overflow: 'hidden',
-                pointerEvents: 'none'
-              }}>
-                <div style={{
-                  height: '100%',
-                  width: `${(node.currentLoad / node.maxCapacity) * 100}%`,
-                  background: node.currentLoad >= node.maxCapacity 
-                    ? 'linear-gradient(to right, #ef4444, #fca5a5)' 
-                    : 'linear-gradient(to right, #4ade80, #86efac)',
-                  transition: 'width 0.2s ease',
-                  borderRadius: '4px'
-                }} />
+      {/* 分类图片列 */}
+      <div className="target-panel">
+        <div className="img-with-dot">
+          <div ref={setDotRef('target-in')} className="dot dot-left"
+            onMouseDown={(e) => onDotMouseDown(e, 'target-in')}
+            onMouseUp={(e) => onDotMouseUp(e, 'target-in')} />
+          <div className="img-bar-wrapper">
+            <img src={targetImg} alt="有目标" className="target-img" draggable={false} />
+            {(testing || targetProgress > 0) && (
+              <div className="bar-overlay">
+                <span className="bar-label">{Math.round(targetProgress * 100)}%</span>
+                <div className="bar-track">
+                  <div className="bar-threshold" />
+                  <div className="bar-fill bar-red" style={{ height: `${targetProgress * 100}%` }} />
+                </div>
               </div>
             )}
           </div>
-
-          {/* 输出连接点1 (上) - 对齐图片上的绿点 */}
-          <div
-            ref={setDotRef(`${node.id}-out1`)}
-            className="dot dot-right"
-            style={{
-              position: 'absolute',
-              right: '-8px',
-              top: '38%',
-              transform: 'translateY(-50%)',
-              zIndex: 20
-            }}
-            onMouseDown={(e) => onDotMouseDown(e, `${node.id}-out1`)}
-            onMouseUp={(e) => onDotMouseUp(e, `${node.id}-out1`)}
-          />
-
-          {/* 输出连接点2 (下) - 对齐图片上的绿点 */}
-          <div
-            ref={setDotRef(`${node.id}-out2`)}
-            className="dot dot-right"
-            style={{
-              position: 'absolute',
-              right: '-8px',
-              top: '80%',
-              transform: 'translateY(-50%)',
-              zIndex: 20
-            }}
-            onMouseDown={(e) => onDotMouseDown(e, `${node.id}-out2`)}
-            onMouseUp={(e) => onDotMouseUp(e, `${node.id}-out2`)}
-          />
         </div>
-      ))}
-
-      {/* 拖动预览 */}
-      {draggingNode && pageRef.current && (
-        <div
-          style={{
-            position: 'fixed',
-            left: draggingNode.mouseX,
-            top: draggingNode.mouseY,
-            transform: 'translate(-50%, -50%)',
-            opacity: 0.6,
-            pointerEvents: 'none',
-            zIndex: 1000
-          }}
-        >
-          <img src={balancerImg} alt="平衡器" style={{ width: '120px', borderRadius: '8px', userSelect: 'none' }} draggable={false} />
+        <div className="img-with-dot">
+          <div ref={setDotRef('no-target-in')} className="dot dot-left"
+            onMouseDown={(e) => onDotMouseDown(e, 'no-target-in')}
+            onMouseUp={(e) => onDotMouseUp(e, 'no-target-in')} />
+          <div className="img-bar-wrapper">
+            <img src={noTargetImg} alt="无目标" className="target-img" draggable={false} />
+            {(testing || noTargetProgress > 0) && (
+              <div className="bar-overlay">
+                <span className="bar-label">{Math.round(noTargetProgress * 100)}%</span>
+                <div className="bar-track">
+                  <div className="bar-threshold" />
+                  <div className="bar-fill bar-blue" style={{ height: `${noTargetProgress * 100}%` }} />
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-      )}
+      </div>
 
-      <div 
-        ref={sidebarRef}
-        className="sidebar"
-        style={{
-          backgroundColor: isOverDeleteZone ? 'rgba(239, 68, 68, 0.2)' : 'transparent',
-          transition: 'background-color 0.2s ease'
-        }}
-      >
+      {/* 右边栏 */}
+      <div ref={sidebarRef} className="sidebar">
         <div className="sidebar-actions">
-          <button 
-            className={`sidebar-btn test-btn ${testing ? 'testing' : ''}`} 
-            onClick={handleTest}
-          >
-            {testing ? '停止' : '测试'}
+          <button className={`sidebar-btn test-btn ${testing ? 'testing' : ''}`} onClick={handleTest} disabled={testing}>
+            {testing ? '测试中...' : '测试'}
           </button>
           <button className={`sidebar-btn save-btn ${saved ? 'saved' : ''}`} onClick={handleSave}>
             {saved ? '已保存 ✓' : '保存'}
           </button>
         </div>
         <div className="sidebar-content">
-          <div className="node-library">
-            <div className="node-library-title">节点库</div>
-            <div 
-              className="library-node"
-              onMouseDown={(e) => handleNodeDragStart(e, 'balancer')}
-              style={{ opacity: placedNodes.length >= 3 ? 0.5 : 1, cursor: placedNodes.length >= 3 ? 'not-allowed' : 'grab' }}
-            >
-              <img src={balancerImg} alt="平衡器" className="library-node-img" draggable={false} />
-              <span className="library-node-label">平衡器 ({placedNodes.length}/3)</span>
-            </div>
+          <div className="sidebar-title">节点库</div>
+          <div 
+            className={`sidebar-node ${placedNodes.find(n => n.type === 'classifier') ? 'disabled' : ''}`}
+            onMouseDown={handleLibraryNodeDragStart}
+          >
+            <img src={classifierImg} alt="分类器" className="sidebar-node-img" draggable={false} />
+            <span className="sidebar-node-label">
+              分类器 ({placedNodes.find(n => n.type === 'classifier') ? '0/1' : '1/1'})
+            </span>
           </div>
         </div>
       </div>
 
+      {/* 已放置的分类器节点 */}
+      {placedNodes.find(n => n.type === 'classifier') && (
+        <div
+          className="classifier-node"
+          style={{ 
+            transform: `translate(${placedNodes.find(n => n.type === 'classifier')?.pos.x ?? 400}px, ${placedNodes.find(n => n.type === 'classifier')?.pos.y ?? 300}px)`,
+            transformOrigin: 'center center',
+            position: 'absolute',
+            left: 0,
+            top: 0,
+            cursor: 'grab',
+            zIndex: 10
+          }}
+          onMouseDown={handlePlacedNodeMouseDown}
+        >
+          <div ref={setDotRef('classifier-in')} className="dot dot-left"
+            onMouseDown={(e) => onDotMouseDown(e, 'classifier-in')}
+            onMouseUp={(e) => onDotMouseUp(e, 'classifier-in')} />
+          <div style={{ position: 'relative', width: '180px', flexShrink: 0 }}>
+            <img src={classifierImg} alt="分类器" className="classifier-img" draggable={false} style={{ width: '100%', display: 'block' }} />
+            <button className="info-btn" onClick={(e) => { e.stopPropagation(); setInfoModal('classifier') }}>i</button>
+            <div ref={setDotRef('classifier-out1')} className="dot"
+              style={{ position: 'absolute', right: 10, top: '35%', transform: 'translateY(-50%)' }}
+              onMouseDown={(e) => onDotMouseDown(e, 'classifier-out1')}
+              onMouseUp={(e) => onDotMouseUp(e, 'classifier-out1')} />
+            <div ref={setDotRef('classifier-out2')} className="dot"
+              style={{ position: 'absolute', right: 10, bottom: 10, transform: 'none' }}
+              onMouseDown={(e) => onDotMouseDown(e, 'classifier-out2')}
+              onMouseUp={(e) => onDotMouseUp(e, 'classifier-out2')} />
+          </div>
+        </div>
+      )}
+
+      {/* 拖拽预览 */}
+      {draggingFromLibrary && (
+        <div
+          style={{
+            position: 'fixed',
+            left: draggingFromLibrary.mouseX,
+            top: draggingFromLibrary.mouseY,
+            transform: 'translate(-50%, -50%)',
+            opacity: 0.7,
+            pointerEvents: 'none',
+            zIndex: 1000
+          }}
+        >
+          <img src={classifierImg} alt="分类器" style={{ width: '180px', borderRadius: '10px' }} draggable={false} />
+        </div>
+      )}
+
+      {/* 测试结果弹窗 */}
+      {testResult && (
+        <div className="info-overlay" onClick={() => setTestResult(null)}>
+          <div className="info-modal result-modal" onClick={e => e.stopPropagation()}>
+            {testResult === 'pass' ? (
+              <>
+                <div className="result-icon">✅</div>
+                <h3 className="info-title" style={{ color: '#34d399' }}>测试通过！</h3>
+                <p className="info-desc">正确率达到 75%，连接方式正确！你已解锁下一关。</p>
+              </>
+            ) : (
+              <>
+                <div className="result-icon">❌</div>
+                <h3 className="info-title" style={{ color: '#f87171' }}>未达标</h3>
+                <p className="info-desc">正确率不足 75%，请检查节点连接是否正确，然后重新测试。</p>
+              </>
+            )}
+            <button className="info-close" onClick={() => setTestResult(null)}>
+              {testResult === 'pass' ? '太棒了！' : '再试一次'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 说明弹窗 */}
       {infoModal && (
         <div className="info-overlay" onClick={() => setInfoModal(null)}>
           <div className="info-modal" onClick={e => e.stopPropagation()}>
             <h3 className="info-title">
-              {infoModal === 'input' ? '📊 输入数据' : infoModal === 'output' ? '🎯 输出目标' : '⚖️ 平衡器'}
+              {infoModal === 'input' ? '📊 输入数据' : '🤖 分类器'}
             </h3>
             <div className="info-columns">
               <div className="info-col">
                 <div className="info-col-label simple">简易版</div>
                 <p className="info-desc">
                   {infoModal === 'input'
-                    ? '这是输入的数据流，包含50个红色方块。你需要使用均衡器将它们平均分配到4个输出目标。'
-                    : infoModal === 'output'
-                    ? '输出目标需要收集8个红色方块，准确率要达到100%。所有4个输出都达标才能过关。'
-                    : '平衡器有1个输入和2个输出。它会把收到的数据平均分配到两个输出端口，实现负载均衡。'}
+                    ? '这就像给AI看很多例子。你给它看很多张图片，告诉它哪些有目标、哪些没有，它就慢慢学会自己判断。'
+                    : '分类器就像一个"判断机器"。数据进去，它想一想，然后告诉你答案是A还是B。连线就是告诉它数据从哪来、结果往哪送。'}
                 </p>
               </div>
               <div className="info-divider" />
@@ -1186,10 +758,8 @@ const Level1Page: React.FC<Level1PageProps> = ({ onBack, onNextLevel }) => {
                 <div className="info-col-label pro">专业版</div>
                 <p className="info-desc">
                   {infoModal === 'input'
-                    ? '输入流包含50个同质数据单元。通过负载均衡器的合理配置，实现数据的均匀分发，确保每个输出节点获得相等的数据量。'
-                    : infoModal === 'output'
-                    ? '每个输出节点要求接收8个数据单元（占总量的1/4），准确率100%。这验证了负载均衡算法的正确性和数据分发的均匀性。'
-                    : '负载均衡器（Load Balancer）实现1:2的数据分流。采用轮询算法（Round-Robin），将输入流量均匀分配到两个输出通道，处理延迟0.01秒。这是分布式系统中的核心组件。'}
+                    ? '训练数据集（Training Dataset）是监督学习的基础。每个样本包含特征向量和标签，模型通过最小化损失函数在数据分布上学习特征映射关系。数据质量和数量直接影响模型的泛化能力。'
+                    : '分类器是一种判别模型，通过学习输入特征空间到类别标签的映射函数 f: X→Y 来实现分类。训练过程通过反向传播算法迭代更新权重参数，使交叉熵损失最小化，从而提升分类准确率。'}
                 </p>
               </div>
             </div>
@@ -1197,64 +767,19 @@ const Level1Page: React.FC<Level1PageProps> = ({ onBack, onNextLevel }) => {
           </div>
         </div>
       )}
-      
-      {/* 教程引导 */}
-      {showTutorial && (
-        <div className="level1-tutorial-overlay">
-          <div className="level1-tutorial-content">
-            {/* 步骤1-3: 显示数据流、分叉失败、问号提示 */}
-            {tutorialStep >= 1 && tutorialStep < 4 && (
-              <>
-                {/* 步骤1: 显示一条数据流 */}
-                <div className="level1-tutorial-stream">
-                  <div className="level1-tutorial-line single" />
-                  <div className="level1-tutorial-data-flow">
-                    <div className="level1-tutorial-particle" style={{ animationDelay: '0s' }} />
-                    <div className="level1-tutorial-particle" style={{ animationDelay: '0.3s' }} />
-                    <div className="level1-tutorial-particle" style={{ animationDelay: '0.6s' }} />
-                  </div>
-                </div>
-                
-                {/* 步骤2: 尝试分叉但失败 */}
-                {tutorialStep >= 2 && (
-                  <div className="level1-tutorial-fork-attempt">
-                    <div className="level1-tutorial-line fork-top failed" />
-                    <div className="level1-tutorial-line fork-bottom failed" />
-                    <div className="level1-tutorial-x-mark">✗</div>
-                  </div>
-                )}
-                
-                {/* 步骤3: 显示问号和提示 */}
-                {tutorialStep >= 3 && (
-                  <div className="level1-tutorial-hint">
-                    <div className="level1-tutorial-question">?</div>
-                    <div className="level1-tutorial-text">
-                      一条数据流无法自动分为两条...
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-            
-            {/* 步骤4: 显示均衡器解决方案（清空之前的内容） */}
-            {tutorialStep >= 4 && (
-              <div className="level1-tutorial-solution">
-                <div className="level1-tutorial-balancer-icon">
-                  <img src={balancerImg} alt="均衡器" style={{ width: '80px', borderRadius: '8px' }} />
-                </div>
-                <div className="level1-tutorial-solution-text">
-                  使用<span className="level1-tutorial-highlight">均衡器</span>节点进行数据分流！
-                </div>
-                <button className="level1-tutorial-btn" onClick={handleCloseTutorial}>
-                  我明白了
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
+
+      {/* 隐藏关卡弹窗 */}
+      {showHiddenLevel && (
+        <HiddenLevelModal
+          onClose={() => setShowHiddenLevel(false)}
+          onTrain={handleHiddenTrain}
+          onSave={handleSaveHiddenParams}
+          initialParams={hiddenParams}
+          isConnectionCorrect={isConnectionCorrect}
+        />
       )}
     </div>
   )
 }
 
-export default Level1Page
+export default Level2CopyPage

@@ -115,6 +115,17 @@
   color: #fff;
 }
 
+.level2-page .toolbar-btn.reset-btn {
+  background: rgba(251, 146, 60, 0.2);
+  border: 1px solid rgba(251, 146, 60, 0.5);
+  color: #fb923c;
+  padding: 8px 12px;
+}
+
+.level2-page .toolbar-btn.reset-btn:hover {
+  background: rgba(251, 146, 60, 0.35);
+}
+
 .level2-page .toolbar-content {
   flex: 1;
   display: flex;
@@ -410,6 +421,8 @@
 
 .level2-page .classifier-node {
   position: absolute;
+  left: 0;
+  top: 0;
   width: 120px;
   height: auto;
   cursor: grab;
@@ -478,6 +491,8 @@
 
 .trash-node {
   position: absolute;
+  left: 0;
+  top: 0;
   width: 80px;
   height: 80px;
   cursor: grab;
