@@ -8,18 +8,17 @@ import ProfilePage from './pages/ProfilePage'
 import TutorialPage from './pages/TutorialPage'
 import Level2Page from './pages/levels/Level2Page'
 import Level2CopyPage from './pages/levels/Level2CopyPage'
-import Level3Page from './pages/levels/Level3Page'
+import Level1Page from './pages/levels/Level1Page'
 import Level4Page from './pages/levels/Level4Page'
-import './utils/achievementDebug' // 引入成就调试工具
+import './utils/achievementDebug'
 
-type Page = 'home' | 'levels' | 'shop' | 'profile' | 'tutorial' | 'level2' | 'level2copy' | 'level3' | 'level4'
+type Page = 'home' | 'levels' | 'shop' | 'profile' | 'tutorial' | 'level1' | 'level2' | 'level2copy' | 'level4'
 
 function AppContent(): React.JSX.Element {
   const [currentPage, setCurrentPage] = useState<Page>('home')
   const { isAuthenticated, isLoading, user } = useAuth()
 
-  // 调试：监控认证状态变化
-  console.log('🔍 App 状态:', { isAuthenticated, isLoading, user })
+  console.log('App status:', { isAuthenticated, isLoading, user })
 
   const navigateTo = (page: Page) => {
     setCurrentPage(page)
@@ -29,9 +28,8 @@ function AppContent(): React.JSX.Element {
     setCurrentPage('home')
   }
 
-  // 加载中
   if (isLoading) {
-    console.log('⏳ 显示加载中...')
+    console.log('Loading...')
     return (
       <div className="app-container" style={{ 
         display: 'flex', 
@@ -39,16 +37,14 @@ function AppContent(): React.JSX.Element {
         justifyContent: 'center',
         background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #7e22ce 100%)'
       }}>
-        <div style={{ color: '#fff', fontSize: '18px' }}>加载中...</div>
+        <div style={{ color: '#fff', fontSize: '18px' }}>Loading...</div>
       </div>
     )
   }
 
-  // 已登录显示主应用
-  console.log(isAuthenticated ? '✅ 已登录，显示主应用' : '🔒 未登录，显示登录弹窗')
+  console.log(isAuthenticated ? 'Logged in' : 'Not logged in')
   return (
     <div className="app-container" style={{ position: 'relative', width: '100%', height: '100vh' }}>
-      {/* 主页面作为背景，未登录时禁用交互 */}
       <div style={{ 
         position: isAuthenticated ? 'relative' : 'absolute',
         top: 0,
@@ -64,15 +60,14 @@ function AppContent(): React.JSX.Element {
         {currentPage === 'home' && <HomePage onNavigate={navigateTo} />}
         {currentPage === 'levels' && <LevelsPage onBack={goHome} onNavigate={navigateTo} />}
         {currentPage === 'tutorial' && <TutorialPage onBack={() => navigateTo('levels')} onNextLevel={() => navigateTo('level2')} />}
+        {currentPage === 'level1' && <Level1Page onBack={() => navigateTo('levels')} onNextLevel={() => navigateTo('level2')} />}
         {currentPage === 'level2' && <Level2Page onBack={() => navigateTo('levels')} />}
         {currentPage === 'level2copy' && <Level2CopyPage onBack={() => navigateTo('levels')} onNextLevel={() => navigateTo('level2')} />}
-        {currentPage === 'level3' && <Level3Page onBack={() => navigateTo('levels')} onNextLevel={() => navigateTo('level4')} />}
         {currentPage === 'level4' && <Level4Page onBack={() => navigateTo('levels')} onNextLevel={() => navigateTo('levels')} />}
         {currentPage === 'shop' && <ShopPage onBack={goHome} />}
         {currentPage === 'profile' && <ProfilePage onBack={goHome} />}
       </div>
       
-      {/* 未登录时显示登录弹窗 */}
       {!isAuthenticated && <LoginPage />}
     </div>
   )

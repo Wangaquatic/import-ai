@@ -36,9 +36,25 @@ interface Particle {
 
 const COINS_KEY = 'player_coins'
 const LEVEL4_REWARD_KEY = 'level4_reward_claimed'
-const LEVEL4_PASSED_KEY = 'level4_passed' // 新增：记录是否通过第四关
+const LEVEL4_PASSED_KEY = 'level4_passed'
+const LEVEL4_SAVE_KEY = 'level4_saved_state'
 
 const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel }) => {
+  // 从localStorage加载保存的状态
+  const loadSavedState = React.useCallback(() => {
+    try {
+      const saved = localStorage.getItem(LEVEL4_SAVE_KEY)
+      if (saved) {
+        return JSON.parse(saved)
+      }
+    } catch (error) {
+      console.error('Failed to load saved state:', error)
+    }
+    return null
+  }, [])
+
+  const savedState = loadSavedState()
+
   const [coins, setCoins] = useState(() => parseInt(localStorage.getItem(COINS_KEY) || '0'))
   const rewardClaimed = React.useRef(!!localStorage.getItem(LEVEL4_REWARD_KEY))
   const [levelPassed, setLevelPassed] = useState(() => !!localStorage.getItem(LEVEL4_PASSED_KEY))
@@ -69,11 +85,11 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel }) => {
     return () => window.removeEventListener('keydown', handleKeyPress)
   }, [])
   const [infoModal, setInfoModal] = useState<'input' | 'output' | 'balancer' | 'classifier' | 'trash' | null>(null)
-  const [placedNodes, setPlacedNodes] = useState<PlacedNode[]>([])
+  const [placedNodes, setPlacedNodes] = useState<PlacedNode[]>(savedState?.placedNodes || [])
   const [draggingNode, setDraggingNode] = useState<{ type: 'balancer' | 'classifier' | 'trash'; mouseX: number; mouseY: number } | null>(null)
   const [draggingPlacedNode, setDraggingPlacedNode] = useState<{ nodeId: string; offsetX: number; offsetY: number } | null>(null)
   const [isOverDeleteZone, setIsOverDeleteZone] = useState(false)
-  const [connections, setConnections] = useState<Connection[]>([])
+  const [connections, setConnections] = useState<Connection[]>(savedState?.connections || [])
   const [draggingLine, setDraggingLine] = useState<{ fromId: string; mouse: Point } | null>(null)
   const [testing, setTesting] = useState(false)
   const [testParticles, setTestParticles] = useState<Particle[]>([])
@@ -84,6 +100,7 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel }) => {
   const [showReward, setShowReward] = useState(false)
   const [speedMultiplier, setSpeedMultiplier] = useState(1.0)
   const [showTimeout, setShowTimeout] = useState(false)
+  const [saved, setSaved] = useState(false)
   
   // 缩放功能
   const { zoom, resetZoom } = useZoom(0.5, 2.0, 0.1)
@@ -353,6 +370,17 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel }) => {
     if (testing) return // 测试中不允许清除
     setPlacedNodes([])
     setConnections([])
+  }
+
+  const handleSave = (): void => {
+    const saveData = {
+      connections,
+      placedNodes,
+      timestamp: Date.now()
+    }
+    localStorage.setItem(LEVEL4_SAVE_KEY, JSON.stringify(saveData))
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
   }
 
   const handleTest = () => {
@@ -1025,7 +1053,9 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel }) => {
           >
             {testing ? '停止' : '测试'}
           </button>
-          <button className="sidebar-btn save-btn">保存</button>
+          <button className={`sidebar-btn save-btn ${saved ? 'saved' : ''}`} onClick={handleSave}>
+            {saved ? '已保存 ✓' : '保存'}
+          </button>
         </div>
         <div className="sidebar-content">
           <div className="node-library">

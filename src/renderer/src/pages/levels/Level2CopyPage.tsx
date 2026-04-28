@@ -1,4 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react'
+import './LevelBase.css'
 import './Level2CopyPage.css'
 import levelBg from '../../assets/level-bg.png'
 import classifierImg from '../../assets/classifier.jpg'
@@ -509,7 +510,7 @@ const Level2CopyPage: React.FC<Level2CopyPageProps> = ({ onBack, onNextLevel }) 
   }
 
   return (
-    <div ref={pageRef} className="level2copy-tutorial-page" onMouseMove={onMouseMove} onMouseUp={onMouseUp}>
+    <div ref={pageRef} className="level-base level2copy-tutorial-page" onMouseMove={onMouseMove} onMouseUp={onMouseUp}>
       <div className="bg-blur-layer" style={{ backgroundImage: `url(${levelBg})` }} />
 
       <svg style={{ position: 'fixed', inset: 0, width: '100vw', height: '100vh', pointerEvents: 'none', zIndex: 50 }}>
@@ -536,6 +537,9 @@ const Level2CopyPage: React.FC<Level2CopyPageProps> = ({ onBack, onNextLevel }) 
 
       {/* 金币显示 */}
       <div className="coins-display">🪙 {coins}</div>
+
+      {/* 节点计数器 */}
+      <div className="node-counter">{1 - placedNodes.length}/1</div>
 
       {/* 奖励弹窗 */}
       {showReward && (
