@@ -293,7 +293,13 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel }) => {
     } else if (draggingPlacedNode) {
       // 检查是否在删除区域
       if (isOverDeleteZone) {
-        setPlacedNodes(prev => prev.filter(n => n.id !== draggingPlacedNode.nodeId))
+        const nodeId = draggingPlacedNode.nodeId
+        // 删除节点
+        setPlacedNodes(prev => prev.filter(n => n.id !== nodeId))
+        // 删除所有与该节点相关的连接线
+        setConnections(prev => prev.filter(conn => 
+          !conn.from.startsWith(nodeId) && !conn.to.startsWith(nodeId)
+        ))
       }
       setDraggingPlacedNode(null)
       setIsOverDeleteZone(false)
@@ -317,7 +323,12 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel }) => {
 
   const handleDeleteNode = (nodeId: string, e: React.MouseEvent) => {
     e.stopPropagation()
+    // 删除节点
     setPlacedNodes(prev => prev.filter(n => n.id !== nodeId))
+    // 删除所有与该节点相关的连接线
+    setConnections(prev => prev.filter(conn => 
+      !conn.from.startsWith(nodeId) && !conn.to.startsWith(nodeId)
+    ))
   }
 
   const handleSpeedChange = () => {
@@ -734,41 +745,14 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel }) => {
         ▶▶ {speedMultiplier.toFixed(1)}x
       </button>
 
-      {/* 清除按钮 */}
+      {/* 清除按钮 - 垃圾桶样式 */}
       <button 
-        className="clear-all-btn" 
+        className="level4-clear-btn" 
         onClick={handleClearAll}
         disabled={testing}
-        style={{
-          position: 'fixed',
-          bottom: '30px',
-          right: levelPassed && onNextLevel ? '200px' : '30px', // 如果有下一关按钮，则向左移动
-          padding: '12px 24px',
-          background: testing ? 'rgba(100, 100, 100, 0.5)' : 'rgba(239, 68, 68, 0.9)',
-          color: '#fff',
-          border: 'none',
-          borderRadius: '8px',
-          fontSize: '16px',
-          fontWeight: 'bold',
-          cursor: testing ? 'not-allowed' : 'pointer',
-          zIndex: 100,
-          transition: 'all 0.2s ease',
-          opacity: testing ? 0.5 : 1
-        }}
-        onMouseEnter={(e) => {
-          if (!testing) {
-            e.currentTarget.style.background = 'rgba(220, 38, 38, 0.9)'
-            e.currentTarget.style.transform = 'scale(1.05)'
-          }
-        }}
-        onMouseLeave={(e) => {
-          if (!testing) {
-            e.currentTarget.style.background = 'rgba(239, 68, 68, 0.9)'
-            e.currentTarget.style.transform = 'scale(1)'
-          }
-        }}
+        title="清除所有节点和连接"
       >
-        🗑️ 清除全部
+        🗑️
       </button>
 
       {/* 超时弹窗 */}
@@ -794,10 +778,10 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel }) => {
         </div>
       )}
 
-      {/* 下一关按钮 - 通关后一直显示 */}
+      {/* 下一关按钮 - 一直显示 */}
       {console.log('Level4 按钮渲染检查:', { levelPassed, onNextLevel: !!onNextLevel, shouldShow: levelPassed && !!onNextLevel })}
-      {levelPassed && onNextLevel && (
-        <button className="next-level-btn" onClick={onNextLevel}>
+      {onNextLevel && (
+        <button className="level4-next-level-btn" onClick={onNextLevel}>
           下一关 →
         </button>
       )}

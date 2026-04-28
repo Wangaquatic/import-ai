@@ -660,3 +660,64 @@
   background: rgba(239, 68, 68, 0.35);
   transform: translateY(-2px);
 }
+
+
+/* 清除按钮 - 垃圾桶样式 */
+.level4-page .level4-clear-btn {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  width: 50px;
+  height: 50px;
+  font-size: 24px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  cursor: pointer;
+  z-index: 100;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+
+.level4-page .level4-clear-btn:hover {
+  background: rgba(239, 68, 68, 0.5);
+  border-color: rgba(239, 68, 68, 0.8);
+  transform: scale(1.1);
+}
+
+.level4-page .level4-clear-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: rgba(100, 100, 100, 0.5);
+}
+
+.level4-page .level4-clear-btn:disabled:hover {
+  transform: none;
+  background: rgba(100, 100, 100, 0.5);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* 下一关按钮 */
+.level4-page .level4-next-level-btn {
+  position: fixed;
+  bottom: 30px;
+  right: 90px;
+  padding: 10px 20px;
+  font-size: 15px;
+  font-weight: 600;
+  background: rgba(52, 211, 153, 0.2);
+  border: 1px solid rgba(52, 211, 153, 0.5);
+  border-radius: 12px;
+  color: #34d399;
+  cursor: pointer;
+  z-index: 100;
+  transition: all 0.2s ease;
+}
+
+.level4-page .level4-next-level-btn:hover {
+  background: rgba(52, 211, 153, 0.35);
+  transform: translateX(3px);
+}
