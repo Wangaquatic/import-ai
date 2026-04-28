@@ -45,11 +45,13 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
   // 检查成就状态并输出调试信息
   const paramMasterUnlocked = !!localStorage.getItem('achievement_param_master')
   const expertTunerUnlocked = !!localStorage.getItem('achievement_expert_tuner')
+  const reverseEngineerUnlocked = !!localStorage.getItem('achievement_reverse_engineer')
   const hiddenExplorerUnlocked = checkHiddenLevelsComplete()
   
   console.log('📊 个人中心 - 成就状态:', {
     参数调优大师: paramMasterUnlocked,
     专家系统调优师: expertTunerUnlocked,
+    反向工程师: reverseEngineerUnlocked,
     隐藏探索者: hiddenExplorerUnlocked,
     隐藏关卡完成数: localStorage.getItem('hidden_levels_completed')
   })
@@ -88,6 +90,14 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
         desc: '完成所有隐藏关卡（3/3）', 
         unlocked: hiddenExplorerUnlocked, 
         iconImg: 'achievement-7.png',
+        hidden: true
+      },
+      { 
+        id: 8, 
+        name: '反向工程师', 
+        desc: '在教学关卡连接错误时达到极低准确率（≤10%）', 
+        unlocked: reverseEngineerUnlocked, 
+        iconImg: 'achievement-3.png',
         hidden: true
       }
     ]

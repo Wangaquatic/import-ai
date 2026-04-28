@@ -28,7 +28,27 @@
 - 基础准确率：75%
 - 最终准确率：75% + 20% = 95%
 
-### 2. 隐藏探索者 🕵️
+### 2. 反向工程师 🔄
+- **解锁条件**：在教学关卡连接错误时达到极低准确率（≤10%）
+- **类型**：隐藏成就
+- **解锁方式**：
+  1. 在教学关卡中故意将分类器节点连接错误：
+     - classifier-out1 → no-target-in（红色方块到无目标）错误连接
+     - classifier-out2 → target-in（蓝色方块到有目标）错误连接
+  2. 点击"测试"按钮运行测试
+  3. 当最终准确率 ≤ 10% 时自动解锁
+- **特点**：
+  - 这是一个"反向"成就，需要故意做错才能解锁
+  - 连接错误时，准确率会反转（正确率变成错误率）
+  - 未解锁时显示为 "???"
+  - 解锁后显示"隐藏"徽章
+
+**如何达到最低准确率**：
+- 确保分类器连接完全错误（两个输出都接错）
+- 基础准确率75%会反转为25%错误率
+- 如果隐藏关卡参数调得很差，可以进一步降低准确率到10%以下
+
+### 3. 隐藏探索者 🕵️
 - **解锁条件**：完成所有隐藏关卡（3/3）
 - **类型**：隐藏成就
 - **解锁方式**：
@@ -66,6 +86,9 @@ achievementDebug.checkStatus()
 // 解锁参数调优大师
 achievementDebug.unlockParamMaster()
 
+// 解锁反向工程师
+achievementDebug.unlockReverseEngineer()
+
 // 解锁隐藏探索者
 achievementDebug.unlockHiddenExplorer()
 
@@ -83,6 +106,8 @@ achievementDebug.completeHiddenLevel(3) // 完成第3个隐藏关卡
 成就数据存储在 localStorage 中：
 
 - `achievement_param_master`: 参数调优大师成就
+- `achievement_expert_tuner`: 专家系统调优师成就
+- `achievement_reverse_engineer`: 反向工程师成就
 - `achievement_hidden_explorer`: 隐藏探索者成就
 - `hidden_levels_completed`: 已完成的隐藏关卡数量
 - `tutorial_hidden_done`: 教学关卡隐藏关卡完成标记

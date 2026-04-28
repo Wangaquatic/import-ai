@@ -1,13 +1,13 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react'
-import './TutorialPage.css'
-import levelBg from '../assets/level-bg.png'
-import classifierImg from '../assets/classifier.jpg'
-import tutorialInput from '../assets/tutorial-input.png'
-import targetImg from '../assets/target.jpg'
-import noTargetImg from '../assets/no-target.png'
-import HiddenLevelModal, { type TrainingParams } from '../components/HiddenLevelModal'
+import './Level2CopyPage.css'
+import levelBg from '../../assets/level-bg.png'
+import classifierImg from '../../assets/classifier.jpg'
+import tutorialInput from '../../assets/tutorial-input.png'
+import targetImg from '../../assets/target.jpg'
+import noTargetImg from '../../assets/no-target.png'
+import HiddenLevelModal, { type TrainingParams } from '../../components/HiddenLevelModal'
 
-interface TutorialPageProps {
+interface Level2CopyPageProps {
   onBack: () => void
   onNextLevel: () => void
 }
@@ -31,13 +31,13 @@ interface DraggingNodeState {
   mouseY: number
 }
 
-const SAVE_KEY = 'tutorial_saved_state'
+const SAVE_KEY = 'level2copy_tutorial_saved_state'
 const COINS_KEY = 'player_coins'
-const TUTORIAL_REWARD_KEY = 'tutorial_reward_claimed'
-const TUTORIAL_PASSED_KEY = 'tutorial_passed'
-const HIDDEN_PARAMS_KEY = 'tutorial_hidden_params'
+const TUTORIAL_REWARD_KEY = 'level2copy_tutorial_reward_claimed'
+const TUTORIAL_PASSED_KEY = 'level2copy_tutorial_passed'
+const HIDDEN_PARAMS_KEY = 'level2copy_tutorial_hidden_params'
 
-const TutorialPage: React.FC<TutorialPageProps> = ({ onBack, onNextLevel }) => {
+const Level2CopyPage: React.FC<Level2CopyPageProps> = ({ onBack, onNextLevel }) => {
   const particles = React.useMemo(() => {
     const binaries = ['0', '1', '01', '10', '001', '101', '110', '011', '100', '111', '0101', '1010', '1100', '0011']
     return Array.from({ length: 15 }, (_, i) => ({
@@ -509,7 +509,7 @@ const TutorialPage: React.FC<TutorialPageProps> = ({ onBack, onNextLevel }) => {
   }
 
   return (
-    <div ref={pageRef} className="tutorial-page" onMouseMove={onMouseMove} onMouseUp={onMouseUp}>
+    <div ref={pageRef} className="level2copy-tutorial-page" onMouseMove={onMouseMove} onMouseUp={onMouseUp}>
       <div className="bg-blur-layer" style={{ backgroundImage: `url(${levelBg})` }} />
 
       <svg style={{ position: 'fixed', inset: 0, width: '100vw', height: '100vh', pointerEvents: 'none', zIndex: 50 }}>
@@ -755,4 +755,4 @@ const TutorialPage: React.FC<TutorialPageProps> = ({ onBack, onNextLevel }) => {
   )
 }
 
-export default TutorialPage
+export default Level2CopyPage

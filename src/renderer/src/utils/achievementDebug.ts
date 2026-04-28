@@ -13,6 +13,12 @@ export const achievementDebug = {
     console.log('✅ 已解锁：专家系统调优师')
   },
 
+  // 解锁反向工程师成就
+  unlockReverseEngineer: () => {
+    localStorage.setItem('achievement_reverse_engineer', '1')
+    console.log('✅ 已解锁：反向工程师')
+  },
+
   // 解锁隐藏探索者成就
   unlockHiddenExplorer: () => {
     localStorage.setItem('achievement_hidden_explorer', '1')
@@ -24,6 +30,7 @@ export const achievementDebug = {
   resetAllAchievements: () => {
     localStorage.removeItem('achievement_param_master')
     localStorage.removeItem('achievement_expert_tuner')
+    localStorage.removeItem('achievement_reverse_engineer')
     localStorage.removeItem('achievement_hidden_explorer')
     localStorage.removeItem('hidden_levels_completed')
     localStorage.removeItem('tutorial_hidden_done')
@@ -35,12 +42,14 @@ export const achievementDebug = {
   checkStatus: () => {
     const paramMaster = !!localStorage.getItem('achievement_param_master')
     const expertTuner = !!localStorage.getItem('achievement_expert_tuner')
+    const reverseEngineer = !!localStorage.getItem('achievement_reverse_engineer')
     const hiddenExplorer = !!localStorage.getItem('achievement_hidden_explorer')
     const hiddenCompleted = parseInt(localStorage.getItem('hidden_levels_completed') || '0')
     
     console.log('📊 成就状态：')
     console.log(`  参数调优大师: ${paramMaster ? '✅ 已解锁' : '🔒 未解锁'}`)
     console.log(`  专家系统调优师: ${expertTuner ? '✅ 已解锁' : '🔒 未解锁'}`)
+    console.log(`  反向工程师: ${reverseEngineer ? '✅ 已解锁' : '🔒 未解锁'}`)
     console.log(`  隐藏探索者: ${hiddenExplorer ? '✅ 已解锁' : '🔒 未解锁'}`)
     console.log(`  已完成隐藏关卡: ${hiddenCompleted}/3`)
   },

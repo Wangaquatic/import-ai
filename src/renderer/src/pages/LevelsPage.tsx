@@ -3,18 +3,19 @@ import './LevelsPage.css'
 
 interface LevelsPageProps {
   onBack: () => void
-  onNavigate: (page: 'tutorial' | 'level2' | 'level3' | 'level4') => void
+  onNavigate: (page: 'tutorial' | 'level2' | 'level2copy' | 'level3' | 'level4') => void
 }
 
 const levels = [
   { id: 1, name: '教学关卡', desc: '从零开始，了解AI训练的基本概念', locked: false, tutorial: true },
   { id: 2, name: '专家系统', desc: '对数据进行清洗', locked: false },
-  { id: 3, name: '过拟合', desc: '识别模型复杂度过高的问题', locked: false },
-  { id: 4, name: '决策树', desc: '掌握树模型的分类逻辑', locked: false },
-  { id: 5, name: '随机森林', desc: '理解集成学习的威力', locked: true },
-  { id: 6, name: '神经网络', desc: '了解多层神经元的传递', locked: true },
-  { id: 7, name: '特征工程', desc: '学习构造有意义的特征', locked: true },
-  { id: 8, name: '超参数调优', desc: '体验参数对模型的影响', locked: true }
+  { id: 3, name: '教学关卡', desc: '从零开始，了解AI训练的基本概念', locked: false },
+  { id: 4, name: '过拟合', desc: '识别模型复杂度过高的问题', locked: false },
+  { id: 5, name: '决策树', desc: '掌握树模型的分类逻辑', locked: false },
+  { id: 6, name: '随机森林', desc: '理解集成学习的威力', locked: true },
+  { id: 7, name: '神经网络', desc: '了解多层神经元的传递', locked: true },
+  { id: 8, name: '特征工程', desc: '学习构造有意义的特征', locked: true },
+  { id: 9, name: '超参数调优', desc: '体验参数对模型的影响', locked: true }
 ]
 
 const LevelsPage: React.FC<LevelsPageProps> = ({ onBack, onNavigate }) => {
@@ -36,8 +37,9 @@ const LevelsPage: React.FC<LevelsPageProps> = ({ onBack, onNavigate }) => {
               if (level.locked) return
               if (level.tutorial) onNavigate('tutorial')
               else if (level.id === 2) onNavigate('level2')
-              else if (level.id === 3) onNavigate('level3')
-              else if (level.id === 4) onNavigate('level4')
+              else if (level.id === 3) onNavigate('level2copy')
+              else if (level.id === 4) onNavigate('level3')
+              else if (level.id === 5) onNavigate('level4')
               else alert(`开始关卡 ${level.id}`)
             }}
           >
