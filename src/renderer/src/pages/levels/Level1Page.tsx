@@ -1,10 +1,12 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react'
+import './LevelBase.css'
 import './Level1Page.css'
 import levelBg from '../../assets/level-bg.png'
 import classifierImg from '../../assets/classifier.jpg'
 import tutorialInput from '../../assets/tutorial-input.png'
 import targetImg from '../../assets/target.jpg'
 import noTargetImg from '../../assets/no-target.png'
+import { useZoom } from '../../hooks/useZoom'
 
 interface Level1PageProps {
   onBack: () => void
@@ -50,6 +52,9 @@ const Level1Page: React.FC<Level1PageProps> = ({ onBack }) => {
   const [coins, setCoins] = useState(() => parseInt(localStorage.getItem(COINS_KEY) || '0'))
   const [showReward, setShowReward] = useState(false)
   const [infoModal, setInfoModal] = useState<'input' | 'classifier' | null>(null)
+  
+  // 缩放功能
+  const { zoom, resetZoom } = useZoom(0.5, 2.0, 0.1)
   const rewardClaimed = React.useRef(!!localStorage.getItem(TUTORIAL_REWARD_KEY))
   const totalRef = useRef({ red: 0, blue: 0 })
   const speedMultiplierRef = useRef(1.0)
@@ -62,6 +67,11 @@ const Level1Page: React.FC<Level1PageProps> = ({ onBack }) => {
     const timer = setTimeout(() => forceUpdate(n => n + 1), 100)
     return () => clearTimeout(timer)
   }, [])
+
+  // 缩放变化时更新连接线
+  useEffect(() => {
+    forceUpdate(n => n + 1)
+  }, [zoom])
 
   const draggingClassifier = useRef(false)
   const dragStart = useRef({ x: 0, y: 0 })
@@ -291,7 +301,7 @@ const Level1Page: React.FC<Level1PageProps> = ({ onBack }) => {
   const setDotRef = (id: string) => (el: HTMLDivElement | null) => { dotRefs.current[id] = el }
 
   return (
-    <div className="level1-page" onMouseMove={onMouseMove} onMouseUp={onMouseUp}>
+    <div className="level-base level1-page" onMouseMove={onMouseMove} onMouseUp={onMouseUp}>
       <div className="bg-blur-layer" style={{ backgroundImage: `url(${levelBg})` }} />
 
       <svg style={{ position: 'fixed', inset: 0, width: '100vw', height: '100vh', pointerEvents: 'none', zIndex: 50 }}>
@@ -314,6 +324,16 @@ const Level1Page: React.FC<Level1PageProps> = ({ onBack }) => {
       {/* 金币显示 */}
       <div className="coins-display">🪙 {coins}</div>
 
+      {/* 缩放指示器 */}
+      <div className="zoom-indicator">
+        <span>🔍 {Math.round(zoom * 100)}%</span>
+        {zoom !== 1.0 && (
+          <button className="zoom-reset-btn" onClick={resetZoom}>
+            重置
+          </button>
+        )}
+      </div>
+
       {/* 奖励弹窗 */}
       {showReward && (
         <div className="reward-popup">
@@ -331,18 +351,11 @@ const Level1Page: React.FC<Level1PageProps> = ({ onBack }) => {
         ▶▶ {speedMultiplier.toFixed(1)}x
       </button>
 
-      {/* 计时器 */}
-      {(testing || elapsed > 0) && (
-        <div className="timer-display">
-          ⏱ {Math.floor(elapsed / 60).toString().padStart(2, '0')}:{(elapsed % 60).toString().padStart(2, '0')}
-        </div>
-      )}
-
       {/* 左边 - 输入图 */}
       <div className="left-panel">
         <div className="img-with-dot">
           <div style={{ position: 'relative', display: 'inline-block' }}>
-            <img src={tutorialInput} alt="教学关卡输入" className="input-img" draggable={false} />
+            <img src={tutorialInput} alt="教学关卡输入" className="input-img" draggable={false} style={{ transform: `scale(${zoom})`, transformOrigin: 'center center' }} />
             <button className="info-btn" onClick={() => setInfoModal('input')}>i</button>
           </div>
           <div ref={setDotRef('input-out')} className="dot dot-right"
@@ -358,7 +371,7 @@ const Level1Page: React.FC<Level1PageProps> = ({ onBack }) => {
             onMouseDown={(e) => onDotMouseDown(e, 'target-in')}
             onMouseUp={(e) => onDotMouseUp(e, 'target-in')} />
           <div className="img-bar-wrapper">
-            <img src={targetImg} alt="有目标" className="target-img" draggable={false} />
+            <img src={targetImg} alt="有目标" className="target-img" draggable={false} style={{ transform: `scale(${zoom})`, transformOrigin: 'center center' }} />
             {(testing || targetProgress > 0) && (
               <div className="bar-overlay">
                 <span className="bar-label">{Math.round(targetProgress * 100)}%</span>
@@ -375,7 +388,7 @@ const Level1Page: React.FC<Level1PageProps> = ({ onBack }) => {
             onMouseDown={(e) => onDotMouseDown(e, 'no-target-in')}
             onMouseUp={(e) => onDotMouseUp(e, 'no-target-in')} />
           <div className="img-bar-wrapper">
-            <img src={noTargetImg} alt="无目标" className="target-img" draggable={false} />
+            <img src={noTargetImg} alt="无目标" className="target-img" draggable={false} style={{ transform: `scale(${zoom})`, transformOrigin: 'center center' }} />
             {(testing || noTargetProgress > 0) && (
               <div className="bar-overlay">
                 <span className="bar-label">{Math.round(noTargetProgress * 100)}%</span>
@@ -407,7 +420,7 @@ const Level1Page: React.FC<Level1PageProps> = ({ onBack }) => {
               onMouseDown={(e) => onDotMouseDown(e, 'classifier-in')}
               onMouseUp={(e) => onDotMouseUp(e, 'classifier-in')} />
             <div style={{ position: 'relative', width: '180px', flexShrink: 0 }}>
-              <img src={classifierImg} alt="分类器" className="classifier-img" draggable={false} style={{ width: '100%', display: 'block' }} />
+              <img src={classifierImg} alt="分类器" className="classifier-img" draggable={false} style={{ width: '100%', display: 'block', transform: `scale(${zoom})`, transformOrigin: 'center center' }} />
               <button className="info-btn" onClick={(e) => { e.stopPropagation(); setInfoModal('classifier') }}>i</button>
               <div ref={setDotRef('classifier-out1')} className="dot"
                 style={{ position: 'absolute', right: 10, top: '35%', transform: 'translateY(-50%)' }}

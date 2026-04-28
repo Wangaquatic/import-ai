@@ -1,9 +1,11 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react'
+import './LevelBase.css'
 import './Level2Page.css'
 import level2Input from '../../assets/level2-input.jpg'
 import level2Output from '../../assets/level2-output2.jpg'
 import level2Expert from '../../assets/level2-expert.jpg'
 import Level2HiddenModal, { type ExpertSystemParams } from '../../components/Level2HiddenModal'
+import { useZoom } from '../../hooks/useZoom'
 
 interface Level2PageProps {
   onBack: () => void
@@ -96,6 +98,10 @@ const Level2Page: React.FC<Level2PageProps> = ({ onBack }) => {
   const [draggingPlacedNode, setDraggingPlacedNode] = useState<{ nodeId: string; offsetX: number; offsetY: number } | null>(null)
   const [showHiddenLevel, setShowHiddenLevel] = useState(false)
   const [elapsed, setElapsed] = useState(0)
+  
+  // 缩放功能
+  const { zoom, resetZoom } = useZoom(0.5, 2.0, 0.1)
+  
   const [hiddenParams, setHiddenParams] = useState<ExpertSystemParams>(() => {
     try {
       const saved = localStorage.getItem(LEVEL2_HIDDEN_PARAMS_KEY)
@@ -129,6 +135,30 @@ const Level2Page: React.FC<Level2PageProps> = ({ onBack }) => {
     const timer = setTimeout(() => forceUpdate(n => n + 1), 100)
     return () => clearTimeout(timer)
   }, [])
+
+  // 监听窗口大小变化，更新连接线（但不在初始化时触发）
+  useEffect(() => {
+    let isInitial = true
+    
+    const handleResize = () => {
+      if (isInitial) {
+        isInitial = false
+        return
+      }
+      forceUpdate(n => n + 1)
+    }
+    
+    window.addEventListener('resize', handleResize)
+    
+    return () => {
+      window.removeEventListener('resize', handleResize)
+    }
+  }, [])
+
+  // 缩放变化时更新连接线
+  useEffect(() => {
+    forceUpdate(n => n + 1)
+  }, [zoom])
 
   const getDotCenter = useCallback((id: string): Point | null => {
     const el = dotRefs.current[id]
@@ -227,8 +257,8 @@ const Level2Page: React.FC<Level2PageProps> = ({ onBack }) => {
           
           if (!existingNode) {
             // 计算节点尺寸，让节点中心对齐鼠标位置
-            const nodeWidth = nodeType === 'classifier' ? 140 : 80
-            const nodeHeight = nodeType === 'classifier' ? 100 : 80
+            const nodeWidth = nodeType === 'classifier' ? 120 : 80
+            const nodeHeight = nodeType === 'classifier' ? 90 : 80
             
             const x = mouseX - nodeWidth / 2
             const y = mouseY - nodeHeight / 2
@@ -706,7 +736,7 @@ const Level2Page: React.FC<Level2PageProps> = ({ onBack }) => {
   }
 
   return (
-    <div ref={pageRef} className="level2-page" onMouseMove={onMouseMove} onMouseUp={onMouseUp}>
+    <div ref={pageRef} className="level-base level2-page" onMouseMove={onMouseMove} onMouseUp={onMouseUp}>
       {/* 漂浮的二进制数字背景 */}
       <div className="particles-container">
         {particles.map((p) => (
@@ -734,6 +764,16 @@ const Level2Page: React.FC<Level2PageProps> = ({ onBack }) => {
       <button className="back-button" onClick={onBack}>← 返回</button>
       <div className="node-counter">{placedNodes.length}/2</div>
       <div className="coins-display">🪙 {coins}</div>
+
+      {/* 缩放指示器 */}
+      <div className="zoom-indicator">
+        <span>🔍 {Math.round(zoom * 100)}%</span>
+        {zoom !== 1.0 && (
+          <button className="zoom-reset-btn" onClick={resetZoom}>
+            重置
+          </button>
+        )}
+      </div>
 
       {showReward && (
         <div className="reward-popup">
@@ -775,7 +815,7 @@ const Level2Page: React.FC<Level2PageProps> = ({ onBack }) => {
         </div>
       </div>
 
-      <div className="input-area">
+      <div className="input-area" style={{ transform: `scale(${zoom})`, transformOrigin: 'center center' }}>
         <div className="input-image-container">
           <img src={level2Input} alt="输入数据" className="input-image" draggable={false} />
           <div
@@ -787,7 +827,7 @@ const Level2Page: React.FC<Level2PageProps> = ({ onBack }) => {
         </div>
       </div>
 
-      <div className="output-area">
+      <div className="output-area" style={{ transform: `scale(${zoom})`, transformOrigin: 'center center' }}>
         <div className="output-image-container">
           <div
             ref={setDotRef('output-in')}
@@ -820,7 +860,8 @@ const Level2Page: React.FC<Level2PageProps> = ({ onBack }) => {
       <div
         className="classifier-node"
         style={{ 
-          transform: `translate(${classifierPos.x}px, ${classifierPos.y}px)`,
+          transform: `translate(${classifierPos.x}px, ${classifierPos.y}px) scale(${zoom})`,
+          transformOrigin: 'center center',
           display: placedNodes.find(n => n.type === 'classifier') ? 'block' : 'none'
         }}
         onMouseDown={(e) => handlePlacedNodeMouseDown('classifier', e)}
@@ -863,7 +904,8 @@ const Level2Page: React.FC<Level2PageProps> = ({ onBack }) => {
       <div
         className="trash-node"
         style={{ 
-          transform: `translate(${trashPos.x}px, ${trashPos.y}px)`,
+          transform: `translate(${trashPos.x}px, ${trashPos.y}px) scale(${zoom})`,
+          transformOrigin: 'center center',
           display: placedNodes.find(n => n.type === 'trash') ? 'block' : 'none'
         }}
         onMouseDown={(e) => handlePlacedNodeMouseDown('trash', e)}
@@ -891,7 +933,7 @@ const Level2Page: React.FC<Level2PageProps> = ({ onBack }) => {
           }}
         >
           {draggingFromLibrary.type === 'classifier' ? (
-            <img src={level2Expert} alt="专家系统" style={{ width: '140px', height: '100px', objectFit: 'cover', borderRadius: '8px' }} draggable={false} />
+            <img src={level2Expert} alt="专家系统" style={{ width: '120px', height: 'auto', borderRadius: '8px' }} draggable={false} />
           ) : (
             <div style={{ fontSize: '48px', width: '80px', height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', borderRadius: '50%' }}>🗑️</div>
           )}

@@ -74,38 +74,6 @@
   transform: translateX(-4px);
 }
 
-.level3-page .node-counter {
-  position: fixed;
-  top: 20px;
-  left: 50%;
-  transform: translateX(calc(-50% - 80px));
-  padding: 8px 20px;
-  background: rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba(96, 165, 250, 0.5);
-  border-radius: 20px;
-  color: #60a5fa;
-  font-size: 18px;
-  font-weight: 700;
-  z-index: 20;
-  letter-spacing: 2px;
-}
-
-.level3-page .coins-display {
-  position: fixed;
-  top: 20px;
-  left: 50%;
-  transform: translateX(calc(-50% - 200px));
-  padding: 8px 16px;
-  background: rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba(250, 204, 21, 0.5);
-  border-radius: 20px;
-  color: #facc15;
-  font-size: 16px;
-  font-weight: 700;
-  z-index: 20;
-  letter-spacing: 1px;
-}
-
 /* 速度控制按钮 */
 .level3-page .speed-btn {
   position: fixed;

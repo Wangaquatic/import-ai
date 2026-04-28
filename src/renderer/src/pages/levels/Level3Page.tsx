@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
+import './LevelBase.css'
 import './Level3Page.css'
 import levelBg from '../../assets/level-bg.png'
 import level3Input from '../../assets/level3-input.png'
 import targetImg from '../../assets/target.jpg'
 import balancerImg from '../../assets/level3-balancer.png'
+import { useZoom } from '../../hooks/useZoom'
 
 interface Level3PageProps {
   onBack: () => void
@@ -107,6 +109,9 @@ const Level3Page: React.FC<Level3PageProps> = ({ onBack, onNextLevel }) => {
   const [speedMultiplier, setSpeedMultiplier] = useState(1.0)
   const [showTimeout, setShowTimeout] = useState(false)
   
+  // 缩放功能
+  const { zoom, resetZoom } = useZoom(0.5, 2.0, 0.1)
+  
   const dotRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const [, forceUpdate] = useState(0)
   const pageRef = useRef<HTMLDivElement>(null)
@@ -121,6 +126,11 @@ const Level3Page: React.FC<Level3PageProps> = ({ onBack, onNextLevel }) => {
     const timer = setTimeout(() => forceUpdate(n => n + 1), 100)
     return () => clearTimeout(timer)
   }, [])
+
+  // 缩放变化时更新连接线
+  useEffect(() => {
+    forceUpdate(n => n + 1)
+  }, [zoom])
 
   useEffect(() => {
     return () => {
@@ -699,7 +709,7 @@ const Level3Page: React.FC<Level3PageProps> = ({ onBack, onNextLevel }) => {
   return (
     <div 
       ref={pageRef}
-      className="level3-page" 
+      className="level-base level3-page" 
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       style={{ cursor: draggingNode || draggingPlacedNode ? 'grabbing' : 'default' }}
@@ -743,6 +753,16 @@ const Level3Page: React.FC<Level3PageProps> = ({ onBack, onNextLevel }) => {
       
       <div className="node-counter">{placedNodes.length}/3</div>
       <div className="coins-display">🪙 {coins}</div>
+
+      {/* 缩放指示器 */}
+      <div className="zoom-indicator">
+        <span>🔍 {Math.round(zoom * 100)}%</span>
+        {zoom !== 1.0 && (
+          <button className="zoom-reset-btn" onClick={resetZoom}>
+            重置
+          </button>
+        )}
+      </div>
 
       {/* 速度控制按钮 */}
       <button className="speed-btn" onClick={handleSpeedChange}>
@@ -795,7 +815,7 @@ const Level3Page: React.FC<Level3PageProps> = ({ onBack, onNextLevel }) => {
         <div style={{
           position: 'fixed',
           top: '20px',
-          right: '350px',
+          left: '280px',
           background: 'rgba(0, 0, 0, 0.7)',
           color: '#fff',
           padding: '8px 16px',
@@ -810,28 +830,28 @@ const Level3Page: React.FC<Level3PageProps> = ({ onBack, onNextLevel }) => {
 
       <div className="left-panel">
         <div className="img-with-dot">
-          <div style={{ position: 'relative', display: 'inline-block' }}>
+          <div style={{ position: 'relative', display: 'inline-block', transform: `scale(${zoom})`, transformOrigin: 'center center' }}>
             <img src={level3Input} alt="输入数据" className="input-img" draggable={false} />
             <button className="info-btn" onClick={() => setInfoModal('input')}>i</button>
+            <div
+              ref={setDotRef('input-out')}
+              className="dot dot-right"
+              onMouseDown={(e) => onDotMouseDown(e, 'input-out')}
+              onMouseUp={(e) => onDotMouseUp(e, 'input-out')}
+            />
           </div>
-          <div
-            ref={setDotRef('input-out')}
-            className="dot dot-right"
-            onMouseDown={(e) => onDotMouseDown(e, 'input-out')}
-            onMouseUp={(e) => onDotMouseUp(e, 'input-out')}
-          />
         </div>
       </div>
 
       <div className="target-panel-4">
         <div className="img-with-dot">
-          <div
-            ref={setDotRef('target1-in')}
-            className="dot dot-left"
-            onMouseDown={(e) => onDotMouseDown(e, 'target1-in')}
-            onMouseUp={(e) => onDotMouseUp(e, 'target1-in')}
-          />
-          <div className="img-bar-wrapper">
+          <div className="img-bar-wrapper" style={{ transform: `scale(${zoom})`, transformOrigin: 'center center' }}>
+            <div
+              ref={setDotRef('target1-in')}
+              className="dot dot-left"
+              onMouseDown={(e) => onDotMouseDown(e, 'target1-in')}
+              onMouseUp={(e) => onDotMouseUp(e, 'target1-in')}
+            />
             <img src={targetImg} alt="目标1" className="target-img-small" draggable={false} />
             <button className="info-btn" onClick={() => setInfoModal('output')}>i</button>
             <div className="target-bars">
@@ -854,13 +874,13 @@ const Level3Page: React.FC<Level3PageProps> = ({ onBack, onNextLevel }) => {
         </div>
 
         <div className="img-with-dot">
-          <div
-            ref={setDotRef('target2-in')}
-            className="dot dot-left"
-            onMouseDown={(e) => onDotMouseDown(e, 'target2-in')}
-            onMouseUp={(e) => onDotMouseUp(e, 'target2-in')}
-          />
-          <div className="img-bar-wrapper">
+          <div className="img-bar-wrapper" style={{ transform: `scale(${zoom})`, transformOrigin: 'center center' }}>
+            <div
+              ref={setDotRef('target2-in')}
+              className="dot dot-left"
+              onMouseDown={(e) => onDotMouseDown(e, 'target2-in')}
+              onMouseUp={(e) => onDotMouseUp(e, 'target2-in')}
+            />
             <img src={targetImg} alt="目标2" className="target-img-small" draggable={false} />
             <div className="target-bars">
               <div className="target-bar-item">
@@ -882,13 +902,13 @@ const Level3Page: React.FC<Level3PageProps> = ({ onBack, onNextLevel }) => {
         </div>
 
         <div className="img-with-dot">
-          <div
-            ref={setDotRef('target3-in')}
-            className="dot dot-left"
-            onMouseDown={(e) => onDotMouseDown(e, 'target3-in')}
-            onMouseUp={(e) => onDotMouseUp(e, 'target3-in')}
-          />
-          <div className="img-bar-wrapper">
+          <div className="img-bar-wrapper" style={{ transform: `scale(${zoom})`, transformOrigin: 'center center' }}>
+            <div
+              ref={setDotRef('target3-in')}
+              className="dot dot-left"
+              onMouseDown={(e) => onDotMouseDown(e, 'target3-in')}
+              onMouseUp={(e) => onDotMouseUp(e, 'target3-in')}
+            />
             <img src={targetImg} alt="目标3" className="target-img-small" draggable={false} />
             <div className="target-bars">
               <div className="target-bar-item">
@@ -910,13 +930,13 @@ const Level3Page: React.FC<Level3PageProps> = ({ onBack, onNextLevel }) => {
         </div>
 
         <div className="img-with-dot">
-          <div
-            ref={setDotRef('target4-in')}
-            className="dot dot-left"
-            onMouseDown={(e) => onDotMouseDown(e, 'target4-in')}
-            onMouseUp={(e) => onDotMouseUp(e, 'target4-in')}
-          />
-          <div className="img-bar-wrapper">
+          <div className="img-bar-wrapper" style={{ transform: `scale(${zoom})`, transformOrigin: 'center center' }}>
+            <div
+              ref={setDotRef('target4-in')}
+              className="dot dot-left"
+              onMouseDown={(e) => onDotMouseDown(e, 'target4-in')}
+              onMouseUp={(e) => onDotMouseUp(e, 'target4-in')}
+            />
             <img src={targetImg} alt="目标4" className="target-img-small" draggable={false} />
             <div className="target-bars">
               <div className="target-bar-item">
@@ -947,7 +967,7 @@ const Level3Page: React.FC<Level3PageProps> = ({ onBack, onNextLevel }) => {
             position: 'absolute',
             left: node.pos.x,
             top: node.pos.y,
-            transform: 'translate(-50%, -50%)',
+            transform: `translate(-50%, -50%) scale(${zoom})`,
             cursor: 'grab',
             zIndex: 10,
             transition: draggingPlacedNode?.nodeId === node.id ? 'none' : 'transform 0.1s ease'

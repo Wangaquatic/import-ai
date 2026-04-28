@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
+import './LevelBase.css'
 import './Level4Page.css'
 import levelBg from '../../assets/level-bg.png'
 import level4Input from '../../assets/level4-output.png'
@@ -7,6 +8,7 @@ import balancerImg from '../../assets/level3-balancer.png'
 import classifierImg from '../../assets/classifier.jpg'
 import trashImg from '../../assets/trash.png'
 import Level4HiddenModal from '../../components/Level4HiddenModal'
+import { useZoom } from '../../hooks/useZoom'
 
 interface Level4PageProps {
   onBack: () => void
@@ -83,6 +85,9 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel }) => {
   const [speedMultiplier, setSpeedMultiplier] = useState(1.0)
   const [showTimeout, setShowTimeout] = useState(false)
   
+  // 缩放功能
+  const { zoom, resetZoom } = useZoom(0.5, 2.0, 0.1)
+  
   const dotRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const [, forceUpdate] = useState(0)
   const pageRef = useRef<HTMLDivElement>(null)
@@ -99,6 +104,11 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel }) => {
     const timer = setTimeout(() => forceUpdate(n => n + 1), 100)
     return () => clearTimeout(timer)
   }, [])
+
+  // 缩放变化时更新连接线
+  useEffect(() => {
+    forceUpdate(n => n + 1)
+  }, [zoom])
 
   useEffect(() => {
     return () => {
@@ -690,7 +700,7 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel }) => {
   return (
     <div 
       ref={pageRef}
-      className="level4-page"
+      className="level-base level4-page"
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       style={{ cursor: draggingNode || draggingPlacedNode ? 'grabbing' : 'default' }}
@@ -740,6 +750,16 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel }) => {
       <div className="node-counter">{getTotalNodes()}/8</div>
       <div className="coins-display">💰 {coins}</div>
 
+      {/* 缩放指示器 */}
+      <div className="zoom-indicator">
+        <span>🔍 {Math.round(zoom * 100)}%</span>
+        {zoom !== 1.0 && (
+          <button className="zoom-reset-btn" onClick={resetZoom}>
+            重置
+          </button>
+        )}
+      </div>
+
       {/* 速度控制按钮 */}
       <button className="speed-btn" onClick={handleSpeedChange}>
         ▶▶ {speedMultiplier.toFixed(1)}x
@@ -786,48 +806,30 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel }) => {
         </button>
       )}
 
-      {/* 计时器 */}
-      {(testing || elapsed > 0) && (
-        <div style={{
-          position: 'fixed',
-          top: '20px',
-          right: '350px',
-          background: 'rgba(0, 0, 0, 0.7)',
-          color: '#fff',
-          padding: '8px 16px',
-          borderRadius: '8px',
-          fontSize: '18px',
-          fontWeight: 'bold',
-          zIndex: 100
-        }}>
-          ⏱ {Math.floor(elapsed / 60).toString().padStart(2, '0')}:{(elapsed % 60).toString().padStart(2, '0')} / {Math.floor(180 / speedMultiplier / 60).toString().padStart(2, '0')}:{Math.floor(180 / speedMultiplier % 60).toString().padStart(2, '0')}
-        </div>
-      )}
-
       <div className="left-panel">
         <div className="img-with-dot">
-          <div style={{ position: 'relative', display: 'inline-block' }}>
+          <div style={{ position: 'relative', display: 'inline-block', transform: `scale(${zoom})`, transformOrigin: 'center center' }}>
             <img src={level4Input} alt="输入图片" className="input-img" draggable={false} />
             <button className="info-btn" onClick={() => setInfoModal('input')}>i</button>
+            <div
+              ref={setDotRef('input-out')}
+              className="dot dot-right"
+              onMouseDown={(e) => onDotMouseDown(e, 'input-out')}
+              onMouseUp={(e) => onDotMouseUp(e, 'input-out')}
+            />
           </div>
-          <div
-            ref={setDotRef('input-out')}
-            className="dot dot-right"
-            onMouseDown={(e) => onDotMouseDown(e, 'input-out')}
-            onMouseUp={(e) => onDotMouseUp(e, 'input-out')}
-          />
         </div>
       </div>
 
       <div className="output-panel">
         <div className="img-with-dot">
-          <div
-            ref={setDotRef('output-in')}
-            className="dot dot-left"
-            onMouseDown={(e) => onDotMouseDown(e, 'output-in')}
-            onMouseUp={(e) => onDotMouseUp(e, 'output-in')}
-          />
-          <div className="img-bar-wrapper">
+          <div className="img-bar-wrapper" style={{ transform: `scale(${zoom})`, transformOrigin: 'center center' }}>
+            <div
+              ref={setDotRef('output-in')}
+              className="dot dot-left"
+              onMouseDown={(e) => onDotMouseDown(e, 'output-in')}
+              onMouseUp={(e) => onDotMouseUp(e, 'output-in')}
+            />
             <img src={targetImg} alt="输出目标" className="output-img" draggable={false} />
             <button className="info-btn" onClick={() => setInfoModal('output')}>i</button>
             <div className="target-bars">
@@ -859,7 +861,7 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel }) => {
             position: 'absolute',
             left: node.pos.x,
             top: node.pos.y,
-            transform: 'translate(-50%, -50%)',
+            transform: `translate(-50%, -50%) scale(${zoom})`,
             cursor: 'grab',
             zIndex: 10,
             transition: draggingPlacedNode?.nodeId === node.id ? 'none' : 'transform 0.1s ease'
