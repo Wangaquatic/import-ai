@@ -1,3 +1,6 @@
+/* 继承自 LevelBase.css 的基础样式 */
+/* 使用 level-base 类来应用通用样式 */
+
 .level2-page {
   position: relative;
   width: 100vw;
@@ -167,6 +170,7 @@
 
 .level2-page .toolbar-node-img {
   width: 100px;
+  height: auto;
   border-radius: 6px;
   user-select: none;
   pointer-events: none;
@@ -219,40 +223,6 @@
   transform: translateX(-4px);
 }
 
-.level2-page .node-counter {
-  position: fixed !important;
-  top: 20px !important;
-  left: 50% !important;
-  transform: translateX(calc(-50% + 80px)) !important;
-  padding: 8px 20px !important;
-  background: rgba(0, 0, 0, 0.5) !important;
-  border: 1px solid rgba(96, 165, 250, 0.5) !important;
-  border-radius: 20px !important;
-  color: #60a5fa !important;
-  font-size: 18px !important;
-  font-weight: 700 !important;
-  z-index: 100 !important;
-  letter-spacing: 2px !important;
-  display: block !important;
-  visibility: visible !important;
-}
-
-.level2-page .coins-display {
-  position: fixed;
-  top: 20px;
-  left: 50%;
-  transform: translateX(calc(-50% - 200px));
-  padding: 8px 12px;
-  background: rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba(250, 204, 21, 0.5);
-  border-radius: 20px;
-  color: #facc15;
-  font-size: 16px;
-  font-weight: 700;
-  z-index: 100;
-  min-width: auto;
-}
-
 .reward-popup {
   position: fixed;
   top: 50%;
@@ -295,49 +265,49 @@
   color: #666;
 }
 
-.input-area {
+/* 输入输出区域 - 固定尺寸 */
+.level2-page .input-area {
   position: absolute;
-  left: 180px;
+  left: 40px;
   top: 50%;
   transform: translateY(-50%);
   z-index: 10;
 }
 
-.input-image-container {
+.level2-page .input-image-container {
   position: relative;
-  width: 200px;
-  height: 150px;
+  width: 120px;
+  height: auto;
 }
 
-.input-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: 10px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+.level2-page .input-image {
+  width: 120px;
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  user-select: none;
 }
 
-.output-area {
+.level2-page .output-area {
   position: absolute;
-  left: auto;
   right: 320px;
   top: 50%;
   transform: translateY(-50%);
   z-index: 10;
 }
 
-.output-image-container {
+.level2-page .output-image-container {
   position: relative;
-  width: 200px;
-  height: 150px;
+  width: 140px;
+  height: auto;
 }
 
-.output-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: 10px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+.level2-page .output-image {
+  width: 140px;
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  user-select: none;
 }
 
 .level2-page .target-bars {
@@ -438,27 +408,26 @@
   transform: translateY(-50%) scale(1.4);
 }
 
-.classifier-node {
+.level2-page .classifier-node {
   position: absolute;
-  width: 140px;
-  height: 100px;
+  width: 120px;
+  height: auto;
   cursor: grab;
   z-index: 15;
 }
 
-.classifier-node:active {
+.level2-page .classifier-node:active {
   cursor: grabbing;
 }
 
-.classifier-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: 10px;
+.level2-page .classifier-image {
+  width: 120px;
+  height: auto;
+  border-radius: 8px;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
 }
 
-.color-mode-btn {
+.level2-page .color-mode-btn {
   position: absolute;
   top: 50%;
   left: 50%;
@@ -479,30 +448,30 @@
   justify-content: center;
 }
 
-.color-mode-btn:hover {
+.level2-page .color-mode-btn:hover {
   transform: translate(-50%, -50%) scale(1.05);
   border-color: rgba(255, 255, 255, 0.8);
   box-shadow: 0 0 12px rgba(255, 255, 255, 0.4);
 }
 
-.red-dot {
+.level2-page .red-dot {
   right: -8px;
   top: 35%;
   transform: translateY(-50%);
 }
 
-.red-dot:hover {
+.level2-page .red-dot:hover {
   transform: translateY(-50%) scale(1.4);
   animation: none;
 }
 
-.green-dot {
+.level2-page .green-dot {
   right: -8px;
   top: 65%;
   transform: translateY(-50%);
 }
 
-.green-dot:hover {
+.level2-page .green-dot:hover {
   transform: translateY(-50%) scale(1.4);
   animation: none;
 }
@@ -633,49 +602,48 @@
 }
 
 @media (max-width: 1200px) {
-  .input-area {
+  .level2-page .input-area {
     left: 30px;
   }
   
-  .output-area {
+  .level2-page .output-area {
     right: 280px;
   }
   
-  .classifier-node {
-    width: 150px;
-    height: 100px;
+  .level2-page .classifier-node {
+    width: 120px;
+    height: auto;
   }
   
-  .input-image-container,
-  .output-image-container {
-    width: 160px;
-    height: 120px;
+  .level2-page .input-image-container,
+  .level2-page .output-image-container {
+    /* 保持固定尺寸，不随屏幕大小变化 */
   }
 }
 
 @media (max-width: 768px) {
-  .control-panel {
+  .level2-page .control-panel {
     flex-wrap: wrap;
     gap: 10px;
     padding: 10px 15px;
   }
   
-  .control-btn {
+  .level2-page .control-btn {
     padding: 8px 15px;
     font-size: 12px;
   }
   
-  .classifier-node {
+  .level2-page .classifier-node {
     width: 120px;
-    height: 80px;
+    height: auto;
   }
   
-  .trash-node {
+  .level2-page .trash-node {
     width: 60px;
     height: 60px;
   }
   
-  .trash-icon {
+  .level2-page .trash-icon {
     width: 60px;
     height: 60px;
     font-size: 36px;
