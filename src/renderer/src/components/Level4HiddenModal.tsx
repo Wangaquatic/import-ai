@@ -38,14 +38,19 @@ const Level4HiddenModal: React.FC<Level4HiddenModalProps> = ({ onClose }) => {
   ])
   const [draggingBlock, setDraggingBlock] = useState<{ type: BlockType; conditionType?: ConditionType; actionType?: ActionType; mouseX: number; mouseY: number } | null>(null)
   const [draggingPlacedBlock, setDraggingPlacedBlock] = useState<{ blockId: string; offsetX: number; offsetY: number } | null>(null)
+  const [isOverDeleteZone, setIsOverDeleteZone] = useState(false)
   const [connectingFrom, setConnectingFrom] = useState<{ blockId: string; type: 'yes' | 'no' | 'next' } | null>(null)
+  const [draggingLine, setDraggingLine] = useState<{ fromBlockId: string; fromType: 'yes' | 'no' | 'next'; mouseX: number; mouseY: number } | null>(null)
   const [testing, setTesting] = useState(false)
   const [testParticles, setTestParticles] = useState<Particle[]>([])
   const [stats, setStats] = useState({ output1: 0, output2: 0, correct: 0, total: 0 })
   const [showResult, setShowResult] = useState(false)
   const [success, setSuccess] = useState(false)
+  const [showGuide, setShowGuide] = useState(true)
+  const [guideStep, setGuideStep] = useState(0)
   
   const canvasRef = useRef<HTMLDivElement>(null)
+  const libraryRef = useRef<HTMLDivElement>(null)
   const animFrameRef = useRef<number | null>(null)
 
   const getBlockColor = (block: LogicBlock): string => {
@@ -109,6 +114,15 @@ const Level4HiddenModal: React.FC<Level4HiddenModalProps> = ({ onClose }) => {
       setPlacedBlocks(prev => prev.map(b => 
         b.id === draggingPlacedBlock.blockId ? { ...b, x, y } : b
       ))
+      
+      // 检查是否在删除区域（左侧栏）
+      if (libraryRef.current) {
+        const libraryRect = libraryRef.current.getBoundingClientRect()
+        const isOver = e.clientX <= libraryRect.right && e.clientY >= libraryRect.top && e.clientY <= libraryRect.bottom
+        setIsOverDeleteZone(isOver)
+      }
+    } else if (draggingLine) {
+      setDraggingLine({ ...draggingLine, mouseX: e.clientX, mouseY: e.clientY })
     }
   }
 
@@ -132,33 +146,46 @@ const Level4HiddenModal: React.FC<Level4HiddenModalProps> = ({ onClose }) => {
       }
       setDraggingBlock(null)
     } else if (draggingPlacedBlock) {
+      // 检查是否在删除区域
+      if (isOverDeleteZone) {
+        handleDeleteBlock(draggingPlacedBlock.blockId)
+      }
       setDraggingPlacedBlock(null)
+      setIsOverDeleteZone(false)
+    } else if (draggingLine) {
+      setDraggingLine(null)
     }
   }
 
   const handleConnectStart = (e: React.MouseEvent, blockId: string, type: 'yes' | 'no' | 'next') => {
     e.stopPropagation()
-    setConnectingFrom({ blockId, type })
+    setDraggingLine({ fromBlockId: blockId, fromType: type, mouseX: e.clientX, mouseY: e.clientY })
   }
 
   const handleConnectEnd = (e: React.MouseEvent, targetBlockId: string) => {
     e.stopPropagation()
-    if (!connectingFrom) return
+    if (!draggingLine) return
+    
+    // 不能连接到自己
+    if (draggingLine.fromBlockId === targetBlockId) {
+      setDraggingLine(null)
+      return
+    }
     
     setPlacedBlocks(prev => prev.map(b => {
-      if (b.id === connectingFrom.blockId) {
+      if (b.id === draggingLine.fromBlockId) {
         return {
           ...b,
           connections: {
             ...b.connections,
-            [connectingFrom.type]: targetBlockId
+            [draggingLine.fromType]: targetBlockId
           }
         }
       }
       return b
     }))
     
-    setConnectingFrom(null)
+    setDraggingLine(null)
   }
 
   const handleDeleteBlock = (blockId: string) => {
@@ -178,6 +205,22 @@ const Level4HiddenModal: React.FC<Level4HiddenModalProps> = ({ onClose }) => {
         }
       }))
     })
+  }
+  
+  const handleDeleteConnection = (blockId: string, connectionType: 'yes' | 'no' | 'next', e: React.MouseEvent) => {
+    e.stopPropagation()
+    setPlacedBlocks(prev => prev.map(b => {
+      if (b.id === blockId) {
+        return {
+          ...b,
+          connections: {
+            ...b.connections,
+            [connectionType]: undefined
+          }
+        }
+      }
+      return b
+    }))
   }
 
   const handleTest = () => {
@@ -320,9 +363,53 @@ const Level4HiddenModal: React.FC<Level4HiddenModalProps> = ({ onClose }) => {
           <p>拖动逻辑块构建一个能正确分类红蓝方块并平衡负载的路由器</p>
         </div>
         
+        {/* 引导提示 */}
+        {showGuide && (
+          <div className="level4-hidden-guide-overlay">
+            <div className="level4-hidden-guide-content">
+              {guideStep === 0 && (
+                <>
+                  <div className="level4-hidden-guide-icon">💡</div>
+                  <h3>欢迎来到隐藏关卡！</h3>
+                  <p>在这里，你需要使用逻辑块构建一个智能路由器</p>
+                  <ul>
+                    <li>从左侧拖动逻辑块到画布</li>
+                    <li>点击节点的连接点，拖动到另一个节点完成连接</li>
+                    <li>点击连接线可以删除连接</li>
+                    <li>将节点拖回左侧栏可以删除节点</li>
+                  </ul>
+                  <button className="level4-hidden-guide-btn" onClick={() => setGuideStep(1)}>
+                    下一步 →
+                  </button>
+                </>
+              )}
+              {guideStep === 1 && (
+                <>
+                  <div className="level4-hidden-guide-icon">🎯</div>
+                  <h3>通关目标</h3>
+                  <p>构建一个路由器，使其满足以下条件：</p>
+                  <ul>
+                    <li><strong>准确率 ≥ 80%</strong>：红色方块到输出1，蓝色方块到输出2</li>
+                    <li><strong>负载差异 ≤ 30%</strong>：两个输出的数量要相对平衡</li>
+                  </ul>
+                  <p className="level4-hidden-guide-hint">
+                    💡 提示：使用"颜色==红?"条件块可以判断方块颜色
+                  </p>
+                  <button className="level4-hidden-guide-btn" onClick={() => setShowGuide(false)}>
+                    开始挑战！
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+        
         <div className="level4-hidden-content">
           {/* 左侧：逻辑块库 */}
-          <div className="level4-hidden-library">
+          <div 
+            ref={libraryRef}
+            className={`level4-hidden-library ${isOverDeleteZone ? 'delete-zone' : ''}`}
+          >
             <h3>逻辑块库</h3>
             
             <div className="level4-hidden-category">
@@ -368,13 +455,19 @@ const Level4HiddenModal: React.FC<Level4HiddenModalProps> = ({ onClose }) => {
               </div>
             </div>
             
+            {isOverDeleteZone && (
+              <div className="level4-hidden-delete-hint">
+                🗑️ 松开鼠标删除节点
+              </div>
+            )}
+            
             <div className="level4-hidden-hint">
-              <strong>提示：</strong>
+              <strong>操作提示：</strong>
               <ul>
-                <li>从"开始"连接到逻辑块</li>
-                <li>条件块有"是/否"两个出口</li>
-                <li>最终连接到"输出1"或"输出2"</li>
-                <li>目标：准确率≥80%，负载差异≤30%</li>
+                <li>拖动节点到画布放置</li>
+                <li>点击连接点拖动连线</li>
+                <li>点击连线可删除</li>
+                <li>拖回左侧栏删除节点</li>
               </ul>
             </div>
           </div>
@@ -402,7 +495,10 @@ const Level4HiddenModal: React.FC<Level4HiddenModalProps> = ({ onClose }) => {
                   {block.type === 'start' && (
                     <div 
                       className="level4-hidden-connector out"
-                      onClick={(e) => handleConnectStart(e, block.id, 'next')}
+                      onMouseDown={(e) => {
+                        e.stopPropagation()
+                        handleConnectStart(e, block.id, 'next')
+                      }}
                     />
                   )}
                   
@@ -410,12 +506,18 @@ const Level4HiddenModal: React.FC<Level4HiddenModalProps> = ({ onClose }) => {
                     <>
                       <div 
                         className="level4-hidden-connector out yes"
-                        onClick={(e) => handleConnectStart(e, block.id, 'yes')}
+                        onMouseDown={(e) => {
+                          e.stopPropagation()
+                          handleConnectStart(e, block.id, 'yes')
+                        }}
                         title="是"
                       >Y</div>
                       <div 
                         className="level4-hidden-connector out no"
-                        onClick={(e) => handleConnectStart(e, block.id, 'no')}
+                        onMouseDown={(e) => {
+                          e.stopPropagation()
+                          handleConnectStart(e, block.id, 'no')
+                        }}
                         title="否"
                       >N</div>
                     </>
@@ -424,21 +526,30 @@ const Level4HiddenModal: React.FC<Level4HiddenModalProps> = ({ onClose }) => {
                   {block.type === 'action' && (
                     <div 
                       className="level4-hidden-connector out"
-                      onClick={(e) => handleConnectStart(e, block.id, 'next')}
+                      onMouseDown={(e) => {
+                        e.stopPropagation()
+                        handleConnectStart(e, block.id, 'next')
+                      }}
                     />
                   )}
                   
                   {block.type === 'end' && (
                     <div 
                       className="level4-hidden-connector in"
-                      onClick={(e) => handleConnectEnd(e, block.id)}
+                      onMouseUp={(e) => {
+                        e.stopPropagation()
+                        handleConnectEnd(e, block.id)
+                      }}
                     />
                   )}
                   
                   {(block.type === 'condition' || block.type === 'action') && (
                     <div 
                       className="level4-hidden-connector in"
-                      onClick={(e) => handleConnectEnd(e, block.id)}
+                      onMouseUp={(e) => {
+                        e.stopPropagation()
+                        handleConnectEnd(e, block.id)
+                      }}
                     />
                   )}
                 </div>
@@ -449,20 +560,49 @@ const Level4HiddenModal: React.FC<Level4HiddenModalProps> = ({ onClose }) => {
                 {placedBlocks.map(block => {
                   const lines: JSX.Element[] = []
                   
+                  // SVG有inset: -50px，所以需要在所有坐标上加50px偏移
+                  const svgOffset = 50
+                  
+                  // 节点尺寸：80x80
+                  // 连接点尺寸：20x20
+                  // in点：left: -10px (中心在0), top: 50% (40px), translateY(-50%) (-10px) = 中心在 (0, 30)
+                  // out点：right: -10px (中心在80), top: 50% (40px), translateY(-50%) (-10px) = 中心在 (80, 30)
+                  // yes点：right: -10px (中心在80), top: 25% (20px), translateY(-50%) (-10px) = 中心在 (80, 10)
+                  // no点：right: -10px (中心在80), top: 75% (60px), translateY(-50%) (-10px) = 中心在 (80, 50)
+                  
                   if (block.connections.yes) {
                     const target = placedBlocks.find(b => b.id === block.connections.yes)
                     if (target) {
+                      const fromX = block.x + 80 + svgOffset
+                      const fromY = block.y + 10 + svgOffset
+                      const toX = target.x + 0 + svgOffset
+                      const toY = target.y + 30 + svgOffset
+                      
                       lines.push(
-                        <line
-                          key={`${block.id}-yes`}
-                          x1={block.x + 80 + 50}
-                          y1={block.y + 25 + 50}
-                          x2={target.x + 50}
-                          y2={target.y + 40 + 50}
-                          stroke="#10b981"
-                          strokeWidth="3"
-                          markerEnd="url(#arrowhead)"
-                        />
+                        <g key={`${block.id}-yes`}>
+                          <line
+                            x1={fromX}
+                            y1={fromY}
+                            x2={toX}
+                            y2={toY}
+                            stroke="transparent"
+                            strokeWidth="12"
+                            strokeLinecap="round"
+                            style={{ cursor: 'pointer', pointerEvents: 'stroke' }}
+                            onClick={(e) => handleDeleteConnection(block.id, 'yes', e)}
+                          />
+                          <line
+                            x1={fromX}
+                            y1={fromY}
+                            x2={toX}
+                            y2={toY}
+                            stroke="#10b981"
+                            strokeWidth="3"
+                            strokeLinecap="round"
+                            markerEnd="url(#arrowhead-green)"
+                            style={{ pointerEvents: 'none' }}
+                          />
+                        </g>
                       )
                     }
                   }
@@ -470,17 +610,36 @@ const Level4HiddenModal: React.FC<Level4HiddenModalProps> = ({ onClose }) => {
                   if (block.connections.no) {
                     const target = placedBlocks.find(b => b.id === block.connections.no)
                     if (target) {
+                      const fromX = block.x + 80 + svgOffset
+                      const fromY = block.y + 50 + svgOffset
+                      const toX = target.x + 0 + svgOffset
+                      const toY = target.y + 30 + svgOffset
+                      
                       lines.push(
-                        <line
-                          key={`${block.id}-no`}
-                          x1={block.x + 80 + 50}
-                          y1={block.y + 55 + 50}
-                          x2={target.x + 50}
-                          y2={target.y + 40 + 50}
-                          stroke="#ef4444"
-                          strokeWidth="3"
-                          markerEnd="url(#arrowhead)"
-                        />
+                        <g key={`${block.id}-no`}>
+                          <line
+                            x1={fromX}
+                            y1={fromY}
+                            x2={toX}
+                            y2={toY}
+                            stroke="transparent"
+                            strokeWidth="12"
+                            strokeLinecap="round"
+                            style={{ cursor: 'pointer', pointerEvents: 'stroke' }}
+                            onClick={(e) => handleDeleteConnection(block.id, 'no', e)}
+                          />
+                          <line
+                            x1={fromX}
+                            y1={fromY}
+                            x2={toX}
+                            y2={toY}
+                            stroke="#ef4444"
+                            strokeWidth="3"
+                            strokeLinecap="round"
+                            markerEnd="url(#arrowhead-red)"
+                            style={{ pointerEvents: 'none' }}
+                          />
+                        </g>
                       )
                     }
                   }
@@ -488,17 +647,36 @@ const Level4HiddenModal: React.FC<Level4HiddenModalProps> = ({ onClose }) => {
                   if (block.connections.next) {
                     const target = placedBlocks.find(b => b.id === block.connections.next)
                     if (target) {
+                      const fromX = block.x + 80 + svgOffset
+                      const fromY = block.y + 30 + svgOffset
+                      const toX = target.x + 0 + svgOffset
+                      const toY = target.y + 30 + svgOffset
+                      
                       lines.push(
-                        <line
-                          key={`${block.id}-next`}
-                          x1={block.x + 80 + 50}
-                          y1={block.y + 40 + 50}
-                          x2={target.x + 50}
-                          y2={target.y + 40 + 50}
-                          stroke="#3b82f6"
-                          strokeWidth="3"
-                          markerEnd="url(#arrowhead)"
-                        />
+                        <g key={`${block.id}-next`}>
+                          <line
+                            x1={fromX}
+                            y1={fromY}
+                            x2={toX}
+                            y2={toY}
+                            stroke="transparent"
+                            strokeWidth="12"
+                            strokeLinecap="round"
+                            style={{ cursor: 'pointer', pointerEvents: 'stroke' }}
+                            onClick={(e) => handleDeleteConnection(block.id, 'next', e)}
+                          />
+                          <line
+                            x1={fromX}
+                            y1={fromY}
+                            x2={toX}
+                            y2={toY}
+                            stroke="#3b82f6"
+                            strokeWidth="3"
+                            strokeLinecap="round"
+                            markerEnd="url(#arrowhead-blue)"
+                            style={{ pointerEvents: 'none' }}
+                          />
+                        </g>
                       )
                     }
                   }
@@ -506,29 +684,73 @@ const Level4HiddenModal: React.FC<Level4HiddenModalProps> = ({ onClose }) => {
                   return lines
                 })}
                 
-                {/* 正在连接的预览线 */}
-                {connectingFrom && canvasRef.current && (
-                  <line
-                    x1={placedBlocks.find(b => b.id === connectingFrom.blockId)?.x! + 80 + 50}
-                    y1={placedBlocks.find(b => b.id === connectingFrom.blockId)?.y! + 40 + 50}
-                    x2={placedBlocks.find(b => b.id === connectingFrom.blockId)?.x! + 80 + 50}
-                    y2={placedBlocks.find(b => b.id === connectingFrom.blockId)?.y! + 40 + 50}
-                    stroke="#fbbf24"
-                    strokeWidth="3"
-                    strokeDasharray="5,5"
-                  />
+                {/* 正在拖动的连接线预览 */}
+                {draggingLine && (
+                  (() => {
+                    const fromBlock = placedBlocks.find(b => b.id === draggingLine.fromBlockId)
+                    if (!fromBlock) return null
+                    
+                    const svgOffset = 50
+                    let fromX = fromBlock.x + 80 + svgOffset
+                    let fromY = fromBlock.y + 30 + svgOffset
+                    
+                    if (draggingLine.fromType === 'yes') {
+                      fromY = fromBlock.y + 10 + svgOffset
+                    } else if (draggingLine.fromType === 'no') {
+                      fromY = fromBlock.y + 50 + svgOffset
+                    }
+                    
+                    if (!canvasRef.current) return null
+                    const rect = canvasRef.current.getBoundingClientRect()
+                    const toX = draggingLine.mouseX - rect.left + svgOffset
+                    const toY = draggingLine.mouseY - rect.top + svgOffset
+                    
+                    return (
+                      <line
+                        x1={fromX}
+                        y1={fromY}
+                        x2={toX}
+                        y2={toY}
+                        stroke="#4ade80"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                        strokeDasharray="6 3"
+                        style={{ pointerEvents: 'none' }}
+                      />
+                    )
+                  })()
                 )}
                 
                 <defs>
                   <marker
-                    id="arrowhead"
+                    id="arrowhead-green"
                     markerWidth="10"
                     markerHeight="10"
                     refX="9"
                     refY="3"
                     orient="auto"
                   >
-                    <polygon points="0 0, 10 3, 0 6" fill="#666" />
+                    <polygon points="0 0, 10 3, 0 6" fill="#10b981" />
+                  </marker>
+                  <marker
+                    id="arrowhead-red"
+                    markerWidth="10"
+                    markerHeight="10"
+                    refX="9"
+                    refY="3"
+                    orient="auto"
+                  >
+                    <polygon points="0 0, 10 3, 0 6" fill="#ef4444" />
+                  </marker>
+                  <marker
+                    id="arrowhead-blue"
+                    markerWidth="10"
+                    markerHeight="10"
+                    refX="9"
+                    refY="3"
+                    orient="auto"
+                  >
+                    <polygon points="0 0, 10 3, 0 6" fill="#3b82f6" />
                   </marker>
                 </defs>
               </svg>
@@ -541,11 +763,9 @@ const Level4HiddenModal: React.FC<Level4HiddenModalProps> = ({ onClose }) => {
               <button className="level4-hidden-btn reset" onClick={handleReset}>
                 🔄 重置
               </button>
-              {connectingFrom && (
-                <div className="level4-hidden-connecting-hint">
-                  正在连线... 点击目标块的输入点完成连接
-                </div>
-              )}
+              <button className="level4-hidden-btn guide" onClick={() => { setShowGuide(true); setGuideStep(0); }}>
+                💡 查看引导
+              </button>
             </div>
           </div>
           
