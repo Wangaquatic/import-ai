@@ -37,6 +37,8 @@ const Level3Page: React.FC<Level3PageProps> = ({ onBack, onNextLevel }) => {
   const [coins, setCoins] = useState(() => parseInt(localStorage.getItem(COINS_KEY) || '0'))
   const rewardClaimed = React.useRef(!!localStorage.getItem(LEVEL3_REWARD_KEY))
   const [levelPassed, setLevelPassed] = useState(() => !!localStorage.getItem(LEVEL3_PASSED_KEY))
+  const [showTutorial, setShowTutorial] = useState(true) // 每次进入都显示
+  const [tutorialStep, setTutorialStep] = useState(0)
   
   // 调试：打印初始状态
   useEffect(() => {
@@ -62,6 +64,32 @@ const Level3Page: React.FC<Level3PageProps> = ({ onBack, onNextLevel }) => {
     window.addEventListener('keydown', handleKeyPress)
     return () => window.removeEventListener('keydown', handleKeyPress)
   }, [])
+  
+  // 教程动画序列
+  useEffect(() => {
+    if (!showTutorial) return
+    
+    const timers: NodeJS.Timeout[] = []
+    
+    // 步骤1: 显示一条数据流 (2秒后)
+    timers.push(setTimeout(() => setTutorialStep(1), 500))
+    
+    // 步骤2: 尝试分叉但失败 (4秒后)
+    timers.push(setTimeout(() => setTutorialStep(2), 2500))
+    
+    // 步骤3: 显示问号和提示 (6秒后)
+    timers.push(setTimeout(() => setTutorialStep(3), 4500))
+    
+    // 步骤4: 显示均衡器解决方案 (8秒后)
+    timers.push(setTimeout(() => setTutorialStep(4), 7000))
+    
+    return () => timers.forEach(t => clearTimeout(t))
+  }, [showTutorial])
+  
+  const handleCloseTutorial = () => {
+    setShowTutorial(false)
+  }
+  
   const [infoModal, setInfoModal] = useState<'input' | 'output' | 'balancer' | null>(null)
   const [placedNodes, setPlacedNodes] = useState<PlacedNode[]>([])
   const [draggingNode, setDraggingNode] = useState<{ type: 'balancer'; mouseX: number; mouseY: number } | null>(null)
@@ -275,7 +303,13 @@ const Level3Page: React.FC<Level3PageProps> = ({ onBack, onNextLevel }) => {
     } else if (draggingPlacedNode) {
       // 检查是否在删除区域
       if (isOverDeleteZone) {
-        setPlacedNodes(prev => prev.filter(n => n.id !== draggingPlacedNode.nodeId))
+        const nodeId = draggingPlacedNode.nodeId
+        // 删除节点
+        setPlacedNodes(prev => prev.filter(n => n.id !== nodeId))
+        // 删除所有与该节点相关的连接线
+        setConnections(prev => prev.filter(conn => 
+          !conn.from.startsWith(nodeId) && !conn.to.startsWith(nodeId)
+        ))
       }
       setDraggingPlacedNode(null)
       setIsOverDeleteZone(false)
@@ -299,7 +333,12 @@ const Level3Page: React.FC<Level3PageProps> = ({ onBack, onNextLevel }) => {
 
   const handleDeleteNode = (nodeId: string, e: React.MouseEvent) => {
     e.stopPropagation()
+    // 删除节点
     setPlacedNodes(prev => prev.filter(n => n.id !== nodeId))
+    // 删除所有与该节点相关的连接线
+    setConnections(prev => prev.filter(conn => 
+      !conn.from.startsWith(nodeId) && !conn.to.startsWith(nodeId)
+    ))
   }
 
   const handleSpeedChange = () => {
@@ -710,41 +749,14 @@ const Level3Page: React.FC<Level3PageProps> = ({ onBack, onNextLevel }) => {
         ▶▶ {speedMultiplier.toFixed(1)}x
       </button>
 
-      {/* 清除按钮 */}
+      {/* 清除按钮 - 垃圾桶样式 */}
       <button 
-        className="clear-all-btn" 
+        className="level3-clear-btn" 
         onClick={handleClearAll}
         disabled={testing}
-        style={{
-          position: 'fixed',
-          bottom: '30px',
-          right: levelPassed && onNextLevel ? '200px' : '30px', // 如果有下一关按钮，则向左移动
-          padding: '12px 24px',
-          background: testing ? 'rgba(100, 100, 100, 0.5)' : 'rgba(239, 68, 68, 0.9)',
-          color: '#fff',
-          border: 'none',
-          borderRadius: '8px',
-          fontSize: '16px',
-          fontWeight: 'bold',
-          cursor: testing ? 'not-allowed' : 'pointer',
-          zIndex: 100,
-          transition: 'all 0.2s ease',
-          opacity: testing ? 0.5 : 1
-        }}
-        onMouseEnter={(e) => {
-          if (!testing) {
-            e.currentTarget.style.background = 'rgba(220, 38, 38, 0.9)'
-            e.currentTarget.style.transform = 'scale(1.05)'
-          }
-        }}
-        onMouseLeave={(e) => {
-          if (!testing) {
-            e.currentTarget.style.background = 'rgba(239, 68, 68, 0.9)'
-            e.currentTarget.style.transform = 'scale(1)'
-          }
-        }}
+        title="清除所有节点和连接"
       >
-        🗑️ 清除全部
+        🗑️
       </button>
 
       {/* 超时弹窗 */}
@@ -770,10 +782,10 @@ const Level3Page: React.FC<Level3PageProps> = ({ onBack, onNextLevel }) => {
         </div>
       )}
 
-      {/* 下一关按钮 - 通关后一直显示 */}
+      {/* 下一关按钮 - 一直显示 */}
       {console.log('Level3 按钮渲染检查:', { levelPassed, onNextLevel: !!onNextLevel, shouldShow: levelPassed && !!onNextLevel })}
-      {levelPassed && onNextLevel && (
-        <button className="next-level-btn" onClick={onNextLevel}>
+      {onNextLevel && (
+        <button className="level3-next-level-btn" onClick={onNextLevel}>
           下一关 →
         </button>
       )}
@@ -1132,6 +1144,62 @@ const Level3Page: React.FC<Level3PageProps> = ({ onBack, onNextLevel }) => {
               </div>
             </div>
             <button className="info-close" onClick={() => setInfoModal(null)}>关闭</button>
+          </div>
+        </div>
+      )}
+      
+      {/* 教程引导 */}
+      {showTutorial && (
+        <div className="level3-tutorial-overlay">
+          <div className="level3-tutorial-content">
+            {/* 步骤1-3: 显示数据流、分叉失败、问号提示 */}
+            {tutorialStep >= 1 && tutorialStep < 4 && (
+              <>
+                {/* 步骤1: 显示一条数据流 */}
+                <div className="level3-tutorial-stream">
+                  <div className="level3-tutorial-line single" />
+                  <div className="level3-tutorial-data-flow">
+                    <div className="level3-tutorial-particle" style={{ animationDelay: '0s' }} />
+                    <div className="level3-tutorial-particle" style={{ animationDelay: '0.3s' }} />
+                    <div className="level3-tutorial-particle" style={{ animationDelay: '0.6s' }} />
+                  </div>
+                </div>
+                
+                {/* 步骤2: 尝试分叉但失败 */}
+                {tutorialStep >= 2 && (
+                  <div className="level3-tutorial-fork-attempt">
+                    <div className="level3-tutorial-line fork-top failed" />
+                    <div className="level3-tutorial-line fork-bottom failed" />
+                    <div className="level3-tutorial-x-mark">✗</div>
+                  </div>
+                )}
+                
+                {/* 步骤3: 显示问号和提示 */}
+                {tutorialStep >= 3 && (
+                  <div className="level3-tutorial-hint">
+                    <div className="level3-tutorial-question">?</div>
+                    <div className="level3-tutorial-text">
+                      一条数据流无法自动分为两条...
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+            
+            {/* 步骤4: 显示均衡器解决方案（清空之前的内容） */}
+            {tutorialStep >= 4 && (
+              <div className="level3-tutorial-solution">
+                <div className="level3-tutorial-balancer-icon">
+                  <img src={balancerImg} alt="均衡器" style={{ width: '80px', borderRadius: '8px' }} />
+                </div>
+                <div className="level3-tutorial-solution-text">
+                  使用<span className="level3-tutorial-highlight">均衡器</span>节点进行数据分流！
+                </div>
+                <button className="level3-tutorial-btn" onClick={handleCloseTutorial}>
+                  我明白了
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

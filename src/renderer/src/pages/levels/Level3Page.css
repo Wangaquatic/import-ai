@@ -628,3 +628,348 @@
   background: rgba(239, 68, 68, 0.35);
   transform: translateY(-2px);
 }
+
+
+/* 教程引导 */
+.level3-tutorial-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  animation: fadeIn 0.5s ease;
+}
+
+.level3-tutorial-content {
+  position: relative;
+  width: 600px;
+  height: 400px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 步骤1: 单条数据流 */
+.level3-tutorial-stream {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 400px;
+  height: 100px;
+}
+
+.level3-tutorial-line {
+  position: absolute;
+  height: 4px;
+  background: linear-gradient(to right, transparent, #60a5fa, transparent);
+  border-radius: 2px;
+  animation: glowPulse 2s infinite;
+}
+
+.level3-tutorial-line.single {
+  width: 400px;
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+}
+
+.level3-tutorial-data-flow {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  transform: translateY(-50%);
+}
+
+.level3-tutorial-particle {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: #ef4444;
+  border-radius: 2px;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.8);
+  animation: flowRight 2s linear infinite;
+}
+
+@keyframes flowRight {
+  0% {
+    left: 0;
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    left: 100%;
+    opacity: 0;
+  }
+}
+
+/* 步骤2: 分叉失败 */
+.level3-tutorial-fork-attempt {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 400px;
+  height: 200px;
+}
+
+.level3-tutorial-line.fork-top {
+  width: 200px;
+  top: 30%;
+  left: 200px;
+  transform: rotate(-20deg);
+  transform-origin: left center;
+}
+
+.level3-tutorial-line.fork-bottom {
+  width: 200px;
+  top: 70%;
+  left: 200px;
+  transform: rotate(20deg);
+  transform-origin: left center;
+}
+
+.level3-tutorial-line.failed {
+  background: linear-gradient(to right, #60a5fa, #ef4444);
+  animation: failFlash 0.5s ease-in-out 3;
+}
+
+@keyframes failFlash {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.level3-tutorial-x-mark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 80px;
+  color: #ef4444;
+  font-weight: bold;
+  animation: xMarkAppear 0.5s ease-out;
+  text-shadow: 0 0 20px rgba(239, 68, 68, 0.8);
+}
+
+@keyframes xMarkAppear {
+  0% {
+    transform: translate(-50%, -50%) scale(0) rotate(-180deg);
+    opacity: 0;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+/* 步骤3: 问号提示 */
+.level3-tutorial-hint {
+  position: absolute;
+  top: 30%;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  animation: hintFadeIn 0.8s ease-out;
+}
+
+.level3-tutorial-question {
+  font-size: 100px;
+  color: #fbbf24;
+  font-weight: bold;
+  margin-bottom: 20px;
+  animation: questionBounce 1s ease-in-out infinite;
+  text-shadow: 0 0 30px rgba(251, 191, 36, 0.6);
+}
+
+@keyframes questionBounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.level3-tutorial-text {
+  font-size: 24px;
+  color: #fff;
+  font-weight: 500;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+
+@keyframes hintFadeIn {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* 步骤4: 解决方案 */
+.level3-tutorial-solution {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  animation: solutionSlideUp 0.8s ease-out;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.level3-tutorial-balancer-icon {
+  animation: iconGlow 2s ease-in-out infinite;
+}
+
+.level3-tutorial-balancer-icon img {
+  filter: drop-shadow(0 0 20px rgba(96, 165, 250, 0.8));
+}
+
+@keyframes iconGlow {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+.level3-tutorial-solution-text {
+  font-size: 22px;
+  color: #fff;
+  font-weight: 500;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+
+.level3-tutorial-highlight {
+  color: #60a5fa;
+  font-weight: bold;
+  text-shadow: 0 0 10px rgba(96, 165, 250, 0.6);
+}
+
+.level3-tutorial-btn {
+  padding: 14px 40px;
+  font-size: 18px;
+  font-weight: bold;
+  color: #fff;
+  background: linear-gradient(135deg, #60a5fa, #3b82f6);
+  border: 2px solid rgba(96, 165, 250, 0.5);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(96, 165, 250, 0.4);
+}
+
+.level3-tutorial-btn:hover {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(96, 165, 250, 0.6);
+}
+
+@keyframes solutionSlideUp {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.8);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes glowPulse {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(96, 165, 250, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(96, 165, 250, 0.8);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+
+/* 清除按钮 - 垃圾桶样式 */
+.level3-page .level3-clear-btn {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  width: 50px;
+  height: 50px;
+  font-size: 24px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  cursor: pointer;
+  z-index: 100;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+
+.level3-page .level3-clear-btn:hover {
+  background: rgba(239, 68, 68, 0.5);
+  border-color: rgba(239, 68, 68, 0.8);
+  transform: scale(1.1);
+}
+
+.level3-page .level3-clear-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: rgba(100, 100, 100, 0.5);
+}
+
+.level3-page .level3-clear-btn:disabled:hover {
+  transform: none;
+  background: rgba(100, 100, 100, 0.5);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* 下一关按钮 */
+.level3-page .level3-next-level-btn {
+  position: fixed;
+  bottom: 30px;
+  right: 90px;
+  padding: 10px 20px;
+  font-size: 15px;
+  font-weight: 600;
+  background: rgba(52, 211, 153, 0.2);
+  border: 1px solid rgba(52, 211, 153, 0.5);
+  border-radius: 12px;
+  color: #34d399;
+  cursor: pointer;
+  z-index: 100;
+  transition: all 0.2s ease;
+}
+
+.level3-page .level3-next-level-btn:hover {
+  background: rgba(52, 211, 153, 0.35);
+  transform: translateX(3px);
+}
