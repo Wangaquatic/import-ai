@@ -201,6 +201,40 @@
   letter-spacing: 2px;
 }
 
+/* 缩放指示器 */
+.tutorial-page .zoom-indicator {
+  position: fixed !important;
+  bottom: 30px !important;
+  left: 90px !important;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 700;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(96, 165, 250, 0.5);
+  border-radius: 20px;
+  color: #60a5fa;
+  z-index: 20;
+  letter-spacing: 1px;
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+}
+
+.tutorial-page .zoom-reset-btn {
+  padding: 4px 8px;
+  font-size: 12px;
+  background: rgba(96, 165, 250, 0.2);
+  border: 1px solid rgba(96, 165, 250, 0.5);
+  border-radius: 6px;
+  color: #60a5fa;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tutorial-page .zoom-reset-btn:hover {
+  background: rgba(96, 165, 250, 0.35);
+}
+
 .save-btn.saved {
   background: rgba(52, 211, 153, 0.4);
   color: #fff;

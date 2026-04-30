@@ -6,6 +6,7 @@ import tutorialInput from '../assets/tutorial-input.png'
 import targetImg from '../assets/target.jpg'
 import noTargetImg from '../assets/no-target.png'
 import HiddenLevelModal, { type TrainingParams } from '../components/HiddenLevelModal'
+import { useZoom } from '../hooks/useZoom'
 
 interface TutorialPageProps {
   onBack: () => void
@@ -111,12 +112,20 @@ const TutorialPage: React.FC<TutorialPageProps> = ({ onBack, onNextLevel }) => {
   const [, forceUpdate] = useState(0)
   const pageRef = useRef<HTMLDivElement>(null)
   const sidebarRef = useRef<HTMLDivElement>(null)
+  
+  // 缩放功能
+  const { zoom, resetZoom } = useZoom(0.5, 2.0, 0.1)
 
   // DOM 渲染完后强制重绘连线
   useEffect(() => {
     const timer = setTimeout(() => forceUpdate(n => n + 1), 100)
     return () => clearTimeout(timer)
   }, [])
+  
+  // zoom变化时重绘连线
+  useEffect(() => {
+    forceUpdate(n => n + 1)
+  }, [zoom])
 
   const dotRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
@@ -537,6 +546,16 @@ const TutorialPage: React.FC<TutorialPageProps> = ({ onBack, onNextLevel }) => {
       {/* 金币显示 */}
       <div className="coins-display">🪙 {coins}</div>
 
+      {/* 缩放指示器 */}
+      <div className="zoom-indicator">
+        <span>🔍 {Math.round(zoom * 100)}%</span>
+        {zoom !== 1.0 && (
+          <button className="zoom-reset-btn" onClick={resetZoom}>
+            重置
+          </button>
+        )}
+      </div>
+
       {/* 奖励弹窗 */}
       {showReward && (
         <div className="reward-popup">
@@ -567,7 +586,7 @@ const TutorialPage: React.FC<TutorialPageProps> = ({ onBack, onNextLevel }) => {
       {/* 左边 - 输入图 */}
       <div className="left-panel">
         <div className="img-with-dot">
-          <div style={{ position: 'relative', display: 'inline-block' }}>
+          <div style={{ position: 'relative', display: 'inline-block', transform: `scale(${zoom})`, transformOrigin: 'center center' }}>
             <img src={tutorialInput} alt="教学关卡输入" className="input-img" draggable={false} />
             <button className="info-btn" onClick={() => setInfoModal('input')}>i</button>
           </div>
@@ -583,7 +602,7 @@ const TutorialPage: React.FC<TutorialPageProps> = ({ onBack, onNextLevel }) => {
           <div ref={setDotRef('target-in')} className="dot dot-left"
             onMouseDown={(e) => onDotMouseDown(e, 'target-in')}
             onMouseUp={(e) => onDotMouseUp(e, 'target-in')} />
-          <div className="img-bar-wrapper">
+          <div className="img-bar-wrapper" style={{ transform: `scale(${zoom})`, transformOrigin: 'center center' }}>
             <img src={targetImg} alt="有目标" className="target-img" draggable={false} />
             {(testing || targetProgress > 0) && (
               <div className="bar-overlay">
@@ -600,7 +619,7 @@ const TutorialPage: React.FC<TutorialPageProps> = ({ onBack, onNextLevel }) => {
           <div ref={setDotRef('no-target-in')} className="dot dot-left"
             onMouseDown={(e) => onDotMouseDown(e, 'no-target-in')}
             onMouseUp={(e) => onDotMouseUp(e, 'no-target-in')} />
-          <div className="img-bar-wrapper">
+          <div className="img-bar-wrapper" style={{ transform: `scale(${zoom})`, transformOrigin: 'center center' }}>
             <img src={noTargetImg} alt="无目标" className="target-img" draggable={false} />
             {(testing || noTargetProgress > 0) && (
               <div className="bar-overlay">
@@ -644,7 +663,8 @@ const TutorialPage: React.FC<TutorialPageProps> = ({ onBack, onNextLevel }) => {
         <div
           className="classifier-node"
           style={{ 
-            transform: `translate(${pos.x}px, ${pos.y}px)`,
+            transform: `translate(${pos.x}px, ${pos.y}px) scale(${zoom})`,
+            transformOrigin: 'center center',
             position: 'absolute',
             cursor: 'grab',
             zIndex: 10
