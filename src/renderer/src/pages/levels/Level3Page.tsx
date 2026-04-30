@@ -797,16 +797,6 @@ const Level1Page: React.FC<Level1PageProps> = ({ onBack, onNextLevel }) => {
         ▶▶ {speedMultiplier.toFixed(1)}x
       </button>
 
-      {/* 清除按钮 - 垃圾桶样式 */}
-      <button 
-        className="level1-clear-btn" 
-        onClick={handleClearAll}
-        disabled={testing}
-        title="清除所有节点和连接"
-      >
-        🗑️
-      </button>
-
       {/* 超时弹窗 */}
       {showTimeout && (
         <div className="timeout-overlay" onClick={() => setShowTimeout(false)}>
@@ -828,14 +818,6 @@ const Level1Page: React.FC<Level1PageProps> = ({ onBack, onNextLevel }) => {
           <div className="reward-text">第三关完成！</div>
           <div className="reward-coins">+150 🪙</div>
         </div>
-      )}
-
-      {/* 下一关按钮 - 一直显示 */}
-      {console.log('Level1 按钮渲染检查:', { levelPassed, onNextLevel: !!onNextLevel, shouldShow: levelPassed && !!onNextLevel })}
-      {onNextLevel && (
-        <button className="level1-next-level-btn" onClick={onNextLevel}>
-          下一关 →
-        </button>
       )}
 
       {/* 计时器 */}
@@ -1161,6 +1143,22 @@ const Level1Page: React.FC<Level1PageProps> = ({ onBack, onNextLevel }) => {
               <span className="library-node-label">平衡器 ({placedNodes.length}/3)</span>
             </div>
           </div>
+        </div>
+        
+        {/* 底部按钮区域 */}
+        <div className="sidebar-bottom">
+          <button 
+            className="sidebar-bottom-btn clear-btn" 
+            onClick={handleClearAll}
+            disabled={testing}
+          >
+            🗑️ 清除
+          </button>
+          {onNextLevel && (
+            <button className="sidebar-bottom-btn next-level-btn" onClick={onNextLevel}>
+              下一关 →
+            </button>
+          )}
         </div>
       </div>
 

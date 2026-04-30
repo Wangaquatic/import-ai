@@ -319,6 +319,73 @@
   overflow-y: auto;
 }
 
+/* 工具栏底部按钮区域 */
+.level-base .sidebar-bottom {
+  padding: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.level-base .sidebar-bottom-btn {
+  width: 100%;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* 清除按钮 */
+.level-base .clear-btn {
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  color: #ef4444;
+}
+
+.level-base .clear-btn:hover {
+  background: rgba(239, 68, 68, 0.35);
+}
+
+.level-base .clear-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.level-base .clear-btn:disabled:hover {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+/* 下一关按钮 */
+.level-base .next-level-btn {
+  background: rgba(52, 211, 153, 0.2);
+  border: 1px solid rgba(52, 211, 153, 0.5);
+  color: #34d399;
+}
+
+.level-base .next-level-btn:hover {
+  background: rgba(52, 211, 153, 0.35);
+  transform: translateX(3px);
+}
+
+/* 上一关按钮 */
+.level-base .prev-level-btn {
+  background: rgba(148, 163, 184, 0.2);
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  color: #94a3b8;
+}
+
+.level-base .prev-level-btn:hover {
+  background: rgba(148, 163, 184, 0.35);
+  transform: translateX(-3px);
+}
+
 /* 连接点 */
 .level-base .dot {
   position: absolute;

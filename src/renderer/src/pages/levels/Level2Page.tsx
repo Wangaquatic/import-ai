@@ -504,6 +504,13 @@ const Level2Page: React.FC<Level2PageProps> = ({ onBack }) => {
     alert('第二关已重置！')
   }
 
+  const handleClearAll = (): void => {
+    if (testing) return // 测试中不允许清除
+    setPlacedNodes([])
+    setConnections([])
+    setTestParticles([])
+  }
+
   const handleTest = useCallback(() => {
     if (testing) return
     setTesting(true)
@@ -823,6 +830,17 @@ const Level2Page: React.FC<Level2PageProps> = ({ onBack }) => {
               垃圾桶 ({placedNodes.find(n => n.type === 'trash') ? '0/1' : '1/1'})
             </span>
           </div>
+        </div>
+        
+        {/* 底部按钮区域 */}
+        <div className="sidebar-bottom">
+          <button 
+            className="sidebar-bottom-btn clear-btn" 
+            onClick={handleClearAll}
+            disabled={testing}
+          >
+            🗑️ 清除
+          </button>
         </div>
       </div>
 

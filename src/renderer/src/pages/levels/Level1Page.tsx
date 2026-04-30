@@ -269,6 +269,12 @@ const Level2CopyPage: React.FC<Level2CopyPageProps> = ({ onBack, onNextLevel }) 
 
   const handleClearLines = () => setConnections([])
 
+  const handleClearAll = () => {
+    if (testing) return // 测试中不允许清除
+    setPlacedNodes([])
+    setConnections([])
+  }
+
   // 启动测试
   const handleTest = () => {
     if (testing) return
@@ -660,6 +666,22 @@ const Level2CopyPage: React.FC<Level2CopyPageProps> = ({ onBack, onNextLevel }) 
               分类器 ({placedNodes.find(n => n.type === 'classifier') ? '0/1' : '1/1'})
             </span>
           </div>
+        </div>
+        
+        {/* 底部按钮区域 */}
+        <div className="sidebar-bottom">
+          <button 
+            className="sidebar-bottom-btn clear-btn" 
+            onClick={handleClearAll}
+            disabled={testing}
+          >
+            🗑️ 清除
+          </button>
+          {onNextLevel && (
+            <button className="sidebar-bottom-btn next-level-btn" onClick={onNextLevel}>
+              下一关 →
+            </button>
+          )}
         </div>
       </div>
 
