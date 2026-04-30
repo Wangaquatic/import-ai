@@ -53,7 +53,7 @@ const Level2HiddenModal: React.FC<Level2HiddenModalProps> = ({
 
   // 动态生成参数提示（根据当前参数值）
   const generateHints = (): Array<{ param: string; tip: string; effect: string }> => {
-    const hints = []
+    const hints: Array<{ param: string; tip: string; effect: string }> = []
     
     // 置信度阈值提示
     if (params.confidenceThreshold < 0.9) {
@@ -107,7 +107,7 @@ const Level2HiddenModal: React.FC<Level2HiddenModalProps> = ({
   const currentHint = hints[hintIndex % hints.length]
 
   // 右侧可拖动的板块（每个参数3个选项）
-  const availableBlocks: DraggableBlock[] = [
+  const allBlocks: DraggableBlock[] = [
     { id: 'conf-low', label: '置信度阈值: 0.5', value: '0.5', type: 'confidenceThreshold' },
     { id: 'conf-mid', label: '置信度阈值: 0.7', value: '0.7', type: 'confidenceThreshold' },
     { id: 'conf-high', label: '置信度阈值: 0.9', value: '0.9', type: 'confidenceThreshold' },
@@ -118,6 +118,13 @@ const Level2HiddenModal: React.FC<Level2HiddenModalProps> = ({
     { id: 'filter-mid', label: '过滤强度: 0.7', value: '0.7', type: 'filterStrength' },
     { id: 'filter-high', label: '过滤强度: 0.95', value: '0.95', type: 'filterStrength' }
   ]
+
+  // 过滤掉已经使用的板块（当前参数值对应的板块）
+  const availableBlocks = allBlocks.filter(block => {
+    const currentValue = params[block.type]
+    const blockValue = parseFloat(block.value)
+    return currentValue !== blockValue
+  })
 
   const handleDragStart = (e: React.DragEvent, block: DraggableBlock) => {
     e.dataTransfer.setData('block', JSON.stringify(block))
@@ -223,7 +230,7 @@ const Level2HiddenModal: React.FC<Level2HiddenModalProps> = ({
         setAchievementUnlocked({
           name: '专家系统调优师',
           desc: '在第二关隐藏关卡中达到完美准确率（100%）',
-          icon: '⚙️'
+          icon: '🎛️'
         })
       }, 500)
     }
@@ -285,7 +292,7 @@ const Level2HiddenModal: React.FC<Level2HiddenModalProps> = ({
           {/* 左侧：伪代码 */}
           <div className="pseudocode-panel">
             <div className="panel-header">
-              <h3 className="panel-title">⚙️ 专家系统核心代码</h3>
+              <h3 className="panel-title">🎛️ 专家系统核心代码</h3>
               <div className="header-buttons">
                 <div className="hint-button-wrapper">
                   <button className="hint-btn" onClick={handleShowNextHint} title="优化提示">

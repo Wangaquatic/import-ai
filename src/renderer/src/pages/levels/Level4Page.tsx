@@ -799,7 +799,7 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel }) => {
       
       {/* 隐藏关卡按钮 - 左下角 */}
       <button className="hidden-level-btn" onClick={() => setShowHiddenLevel(true)} title="隐藏关卡">
-        🔬
+        🎛️
       </button>
       
       <div className="node-counter">{getTotalNodes()}/8</div>

@@ -3,7 +3,7 @@ import './LevelsPage.css'
 
 interface LevelsPageProps {
   onBack: () => void
-  onNavigate: (page: 'tutorial' | 'level1' | 'level2' | 'level3' | 'level4') => void
+  onNavigate: (page: 'level1' | 'level2' | 'level3' | 'level4') => void
 }
 
 const levels = [

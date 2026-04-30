@@ -364,9 +364,19 @@
 
 /* 下一关按钮 */
 .level-base .next-level-btn {
+  position: fixed;
+  bottom: 30px;
+  right: 90px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
   background: rgba(52, 211, 153, 0.2);
   border: 1px solid rgba(52, 211, 153, 0.5);
+  border-radius: 12px;
   color: #34d399;
+  cursor: pointer;
+  z-index: 20;
+  transition: all 0.2s ease;
 }
 
 .level-base .next-level-btn:hover {

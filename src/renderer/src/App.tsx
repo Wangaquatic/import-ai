@@ -5,7 +5,6 @@ import HomePage from './pages/HomePage'
 import LevelsPage from './pages/LevelsPage'
 import ShopPage from './pages/ShopPage'
 import ProfilePage from './pages/ProfilePage'
-import TutorialPage from './pages/TutorialPage'
 import Level1Page from './pages/levels/Level1Page'
 import Level2Page from './pages/levels/Level2Page'
 import Level3Page from './pages/levels/Level3Page'
@@ -63,7 +62,6 @@ function AppContent(): React.JSX.Element {
       }}>
         {currentPage === 'home' && <HomePage onNavigate={navigateTo} />}
         {currentPage === 'levels' && <LevelsPage onBack={goHome} onNavigate={navigateTo} />}
-        {currentPage === 'tutorial' && <TutorialPage onBack={() => navigateTo('levels')} onNextLevel={() => navigateTo('level1')} />}
         {currentPage === 'level1' && <Level1Page onBack={() => navigateTo('levels')} onNextLevel={() => navigateTo('level2')} />}
         {currentPage === 'level2' && <Level2Page onBack={() => navigateTo('levels')} />}
         {currentPage === 'level3' && <Level3Page onBack={() => navigateTo('levels')} onNextLevel={() => navigateTo('level4')} />}

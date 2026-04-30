@@ -359,7 +359,7 @@ const Level4HiddenModal: React.FC<Level4HiddenModalProps> = ({ onClose }) => {
         <button className="level4-hidden-close" onClick={onClose}>×</button>
         
         <div className="level4-hidden-header">
-          <h2>🔬 隐藏关卡：构建智能路由器</h2>
+          <h2>🎛️ 隐藏关卡：构建智能路由器</h2>
           <p>拖动逻辑块构建一个能正确分类红蓝方块并平衡负载的路由器</p>
         </div>
         
@@ -410,7 +410,7 @@ const Level4HiddenModal: React.FC<Level4HiddenModalProps> = ({ onClose }) => {
             ref={libraryRef}
             className={`level4-hidden-library ${isOverDeleteZone ? 'delete-zone' : ''}`}
           >
-            <h3>逻辑块库</h3>
+            <h3>🎛️ 逻辑块库</h3>
             
             <div className="level4-hidden-category">
               <div className="level4-hidden-category-title">条件块</div>
@@ -771,7 +771,7 @@ const Level4HiddenModal: React.FC<Level4HiddenModalProps> = ({ onClose }) => {
           
           {/* 右侧：测试结果 */}
           <div className="level4-hidden-results">
-            <h3>测试结果</h3>
+            <h3>🎛️ 测试结果</h3>
             
             {showResult ? (
               <div className={`level4-hidden-result-panel ${success ? 'success' : 'fail'}`}>

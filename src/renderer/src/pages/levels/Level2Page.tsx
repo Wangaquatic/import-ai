@@ -991,7 +991,7 @@ const Level2Page: React.FC<Level2PageProps> = ({ onBack }) => {
         title="隐藏关卡"
         disabled={testing}
       >
-        🔧
+        🎛️
       </button>
 
       {/* 隐藏关卡模态框 */}

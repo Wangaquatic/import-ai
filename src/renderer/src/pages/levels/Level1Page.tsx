@@ -1,3 +1,4 @@
+// Level1Page (教学关卡) - With zoom functionality
 import React, { useState, useRef, useCallback, useEffect } from 'react'
 import './LevelBase.css'
 import './Level1Page.css'
@@ -7,6 +8,7 @@ import tutorialInput from '../../assets/tutorial-input.png'
 import targetImg from '../../assets/target.jpg'
 import noTargetImg from '../../assets/no-target.png'
 import HiddenLevelModal, { type TrainingParams } from '../../components/HiddenLevelModal'
+import { useZoom } from '../../hooks/useZoom'
 
 interface Level2CopyPageProps {
   onBack: () => void
@@ -98,6 +100,15 @@ const Level2CopyPage: React.FC<Level2CopyPageProps> = ({ onBack, onNextLevel }) 
   const [showHiddenLevel, setShowHiddenLevel] = useState(false)
   const [draggingFromLibrary, setDraggingFromLibrary] = useState<DraggingNodeState | null>(null)
   const [draggingPlacedNode, setDraggingPlacedNode] = useState<{ nodeId: string; offsetX: number; offsetY: number } | null>(null)
+
+  // 金币更新回调
+  const handleCoinsUpdate = (newCoins: number) => {
+    setCoins(newCoins)
+  }
+
+  // 缩放功能
+  const { zoom, resetZoom } = useZoom(0.5, 2.0, 0.1)
+
   const [hiddenParams, setHiddenParams] = useState<TrainingParams>(() => {
     try {
       const saved = localStorage.getItem(HIDDEN_PARAMS_KEY)
@@ -558,11 +569,21 @@ const Level2CopyPage: React.FC<Level2CopyPageProps> = ({ onBack, onNextLevel }) 
 
       {/* 隐藏关卡按钮 - 左下角 */}
       <button className="hidden-level-btn" onClick={() => setShowHiddenLevel(true)} title="隐藏关卡">
-        🔬
+        🎛️
       </button>
 
       {/* 金币显示 */}
       <div className="coins-display">🪙 {coins}</div>
+
+      {/* 缩放指示器 */}
+      <div className="zoom-indicator">
+        <span>🔍 {Math.round(zoom * 100)}%</span>
+        {zoom !== 1.0 && (
+          <button className="zoom-reset-btn" onClick={resetZoom}>
+            重置
+          </button>
+        )}
+      </div>
 
       {/* 节点计数器 */}
       <div className="node-counter">{1 - placedNodes.length}/1</div>
@@ -597,23 +618,23 @@ const Level2CopyPage: React.FC<Level2CopyPageProps> = ({ onBack, onNextLevel }) 
       {/* 左边 - 输入图 */}
       <div className="left-panel">
         <div className="img-with-dot">
-          <div style={{ position: 'relative', display: 'inline-block' }}>
+          <div style={{ position: 'relative', display: 'inline-block', transform: `scale(${zoom})`, transformOrigin: 'center center' }}>
             <img src={tutorialInput} alt="教学关卡输入" className="input-img" draggable={false} />
             <button className="info-btn" onClick={() => setInfoModal('input')}>i</button>
+            <div ref={setDotRef('input-out')} className="dot dot-right"
+              onMouseDown={(e) => onDotMouseDown(e, 'input-out')}
+              onMouseUp={(e) => onDotMouseUp(e, 'input-out')} />
           </div>
-          <div ref={setDotRef('input-out')} className="dot dot-right"
-            onMouseDown={(e) => onDotMouseDown(e, 'input-out')}
-            onMouseUp={(e) => onDotMouseUp(e, 'input-out')} />
         </div>
       </div>
 
       {/* 分类图片列 */}
       <div className="target-panel">
         <div className="img-with-dot">
-          <div ref={setDotRef('target-in')} className="dot dot-left"
-            onMouseDown={(e) => onDotMouseDown(e, 'target-in')}
-            onMouseUp={(e) => onDotMouseUp(e, 'target-in')} />
-          <div className="img-bar-wrapper">
+          <div className="img-bar-wrapper" style={{ transform: `scale(${zoom})`, transformOrigin: 'center center' }}>
+            <div ref={setDotRef('target-in')} className="dot dot-left"
+              onMouseDown={(e) => onDotMouseDown(e, 'target-in')}
+              onMouseUp={(e) => onDotMouseUp(e, 'target-in')} />
             <img src={targetImg} alt="有目标" className="target-img" draggable={false} />
             {(testing || targetProgress > 0) && (
               <div className="bar-overlay">
@@ -627,10 +648,10 @@ const Level2CopyPage: React.FC<Level2CopyPageProps> = ({ onBack, onNextLevel }) 
           </div>
         </div>
         <div className="img-with-dot">
-          <div ref={setDotRef('no-target-in')} className="dot dot-left"
-            onMouseDown={(e) => onDotMouseDown(e, 'no-target-in')}
-            onMouseUp={(e) => onDotMouseUp(e, 'no-target-in')} />
-          <div className="img-bar-wrapper">
+          <div className="img-bar-wrapper" style={{ transform: `scale(${zoom})`, transformOrigin: 'center center' }}>
+            <div ref={setDotRef('no-target-in')} className="dot dot-left"
+              onMouseDown={(e) => onDotMouseDown(e, 'no-target-in')}
+              onMouseUp={(e) => onDotMouseUp(e, 'no-target-in')} />
             <img src={noTargetImg} alt="无目标" className="target-img" draggable={false} />
             {(testing || noTargetProgress > 0) && (
               <div className="bar-overlay">
@@ -690,7 +711,7 @@ const Level2CopyPage: React.FC<Level2CopyPageProps> = ({ onBack, onNextLevel }) 
         <div
           className="classifier-node"
           style={{ 
-            transform: `translate(${placedNodes.find(n => n.type === 'classifier')?.pos.x ?? 400}px, ${placedNodes.find(n => n.type === 'classifier')?.pos.y ?? 300}px)`,
+            transform: `translate(${placedNodes.find(n => n.type === 'classifier')?.pos.x ?? 400}px, ${placedNodes.find(n => n.type === 'classifier')?.pos.y ?? 300}px) scale(${zoom})`,
             transformOrigin: 'center center',
             position: 'absolute',
             left: 0,
@@ -798,6 +819,7 @@ const Level2CopyPage: React.FC<Level2CopyPageProps> = ({ onBack, onNextLevel }) 
           onSave={handleSaveHiddenParams}
           initialParams={hiddenParams}
           isConnectionCorrect={isConnectionCorrect}
+          onCoinsUpdate={handleCoinsUpdate}
         />
       )}
     </div>

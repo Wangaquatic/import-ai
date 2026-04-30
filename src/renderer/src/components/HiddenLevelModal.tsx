@@ -8,6 +8,7 @@ interface HiddenLevelModalProps {
   onSave: (params: TrainingParams) => void
   initialParams: TrainingParams
   isConnectionCorrect: boolean // 新增：教学关卡连接是否正确
+  onCoinsUpdate: (newCoins: number) => void
 }
 
 export interface TrainingParams {
@@ -24,16 +25,28 @@ interface DraggableBlock {
   type: 'learningRate' | 'batchSize' | 'epochs' | 'optimizer'
 }
 
-const HiddenLevelModal: React.FC<HiddenLevelModalProps> = ({ onClose, onTrain, onSave, initialParams, isConnectionCorrect }) => {
+const HiddenLevelModal: React.FC<HiddenLevelModalProps> = ({ onClose, onTrain, onSave, initialParams, isConnectionCorrect, onCoinsUpdate }) => {
   const [params, setParams] = useState<TrainingParams>(initialParams)
   const [training, setTraining] = useState(false)
   const [accuracy, setAccuracy] = useState<number | null>(null)
   const [dragOverTarget, setDragOverTarget] = useState<string | null>(null)
   const [showHelp, setShowHelp] = useState(false)
   const [achievementUnlocked, setAchievementUnlocked] = useState<{name: string, desc: string, icon: string} | null>(null)
+  const [showHint, setShowHint] = useState(false)
+  const [hintIndex, setHintIndex] = useState(0)
+  const [hasReached95, setHasReached95] = useState(false)
+  const [displayCoins, setDisplayCoins] = useState(() => parseInt(localStorage.getItem('player_coins') || '0'))
+  const [showFloatingHint, setShowFloatingHint] = useState(false)
+  const [showCoinSpentNotice, setShowCoinSpentNotice] = useState(false)
+  const [showAlreadyPurchased, setShowAlreadyPurchased] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [hasPurchasedAnswer, setHasPurchasedAnswer] = useState(() => {
+    const userId = localStorage.getItem('user_id')
+    return !!localStorage.getItem(`tutorial_answer_purchased_${userId}`)
+  })
 
   // 右侧可拖动的板块
-  const availableBlocks: DraggableBlock[] = [
+  const allBlocks: DraggableBlock[] = [
     { id: 'lr-low', label: '学习率 (learning_rate): 0.001', value: '0.001', type: 'learningRate' },
     { id: 'lr-high', label: '学习率 (learning_rate): 0.1', value: '0.1', type: 'learningRate' },
     { id: 'batch-small', label: '批量大小 (batch_size): 8', value: '8', type: 'batchSize' },
@@ -43,6 +56,83 @@ const HiddenLevelModal: React.FC<HiddenLevelModalProps> = ({ onClose, onTrain, o
     { id: 'opt-adam', label: '优化器 (optimizer): Adam', value: 'Adam', type: 'optimizer' },
     { id: 'opt-rmsprop', label: '优化器 (optimizer): RMSprop', value: 'RMSprop', type: 'optimizer' }
   ]
+
+  // 过滤掉已经使用的板块（当前参数值对应的板块）
+  const availableBlocks = allBlocks.filter(block => {
+    const currentValue = params[block.type]
+    const blockValue = block.type === 'optimizer' ? block.value : parseFloat(block.value)
+    return currentValue !== blockValue
+  })
+
+  // 动态生成参数提示（根据当前参数值）
+  const generateHints = (): Array<{ param: string; tip: string; effect: string }> => {
+    const hints: Array<{ param: string; tip: string; effect: string }> = []
+    
+    // 学习率提示
+    if (params.learningRate < 0.1) {
+      hints.push({
+        param: '学习率',
+        tip: '💡 试试调高学习率，就像加快学习速度，能更快地找到最优解',
+        effect: '📈 调高：收敛更快，但可能不稳定\n📉 调低：更稳定，但收敛很慢'
+      })
+    } else {
+      hints.push({
+        param: '学习率',
+        tip: '✅ 学习率已经很高了，保持当前设置即可',
+        effect: '📈 调高：收敛更快，但可能不稳定\n📉 调低：更稳定，但收敛很慢'
+      })
+    }
+    
+    // 批量大小提示
+    if (params.batchSize < 32) {
+      hints.push({
+        param: '批量大小',
+        tip: '💡 试试调高批量大小，就像一次处理更多数据，能提高训练稳定性',
+        effect: '📈 调高：训练更稳定，速度更快\n📉 调低：更新更频繁，但可能不稳定'
+      })
+    } else {
+      hints.push({
+        param: '批量大小',
+        tip: '✅ 批量大小已经很高了，保持当前设置即可',
+        effect: '📈 调高：训练更稳定，速度更快\n📉 调低：更新更频繁，但可能不稳定'
+      })
+    }
+    
+    // 训练轮数提示
+    if (params.epochs < 20) {
+      hints.push({
+        param: '训练轮数',
+        tip: '💡 试试调高训练轮数，就像多练习几次，能更充分地学习数据特征',
+        effect: '📈 调高：学习更充分，准确率更高\n📉 调低：训练时间短，但可能欠拟合'
+      })
+    } else {
+      hints.push({
+        param: '训练轮数',
+        tip: '✅ 训练轮数已经很高了，保持当前设置即可',
+        effect: '📈 调高：学习更充分，准确率更高\n📉 调低：训练时间短，但可能欠拟合'
+      })
+    }
+    
+    // 优化器提示
+    if (params.optimizer !== 'Adam') {
+      hints.push({
+        param: '优化器',
+        tip: '💡 试试使用 Adam 优化器，它能自适应调整学习率，效果最佳',
+        effect: '📈 Adam：自适应学习率，收敛快且稳定\n📉 RMSprop：适用于循环神经网络，但不如Adam通用'
+      })
+    } else {
+      hints.push({
+        param: '优化器',
+        tip: '✅ 优化器已经是最优选择了，保持当前设置即可',
+        effect: '📈 Adam：自适应学习率，收敛快且稳定\n📉 RMSprop：适用于循环神经网络，但不如Adam通用'
+      })
+    }
+    
+    return hints
+  }
+
+  const hints = generateHints()
+  const currentHint = hints[hintIndex % hints.length]
 
   const handleDragStart = (e: React.DragEvent, block: DraggableBlock) => {
     e.dataTransfer.setData('block', JSON.stringify(block))
@@ -79,6 +169,8 @@ const HiddenLevelModal: React.FC<HiddenLevelModalProps> = ({ onClose, onTrain, o
 
   const handleSave = () => {
     onSave(params)
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
     
     // 标记教学关卡隐藏关卡已完成
     const currentCompleted = parseInt(localStorage.getItem('hidden_levels_completed') || '0')
@@ -100,13 +192,17 @@ const HiddenLevelModal: React.FC<HiddenLevelModalProps> = ({ onClose, onTrain, o
         }, 500)
       }
     }
-    
+  }
+
+  const handleApply = () => {
+    onSave(params)
     onClose()
   }
 
   const handleTrain = async () => {
     setTraining(true)
     setAccuracy(null)
+    setShowFloatingHint(false) // 测试时先隐藏浮动提示
     
     console.log('🚀 开始训练测试...')
     console.log('📋 当前参数:', params)
@@ -126,6 +222,17 @@ const HiddenLevelModal: React.FC<HiddenLevelModalProps> = ({ onClose, onTrain, o
     
     setAccuracy(result)
     setTraining(false)
+    
+    // 检查是否达到95%
+    if (result >= 94.5) {
+      setHasReached95(true)
+      setShowFloatingHint(false) // 达到95%后隐藏浮动提示
+    } else {
+      // 未达到95%，延迟显示浮动提示
+      setTimeout(() => {
+        setShowFloatingHint(true)
+      }, 500)
+    }
     
     // 调试信息
     const alreadyUnlocked = !!localStorage.getItem('achievement_param_master')
@@ -155,7 +262,7 @@ const HiddenLevelModal: React.FC<HiddenLevelModalProps> = ({ onClose, onTrain, o
         setAchievementUnlocked({
           name: '参数调优大师',
           desc: '在教学关卡隐藏关卡中达到最高正确率（95%）',
-          icon: '🔬'
+          icon: '🎛️'
         })
       }, 500)
     } else {
@@ -164,6 +271,54 @@ const HiddenLevelModal: React.FC<HiddenLevelModalProps> = ({ onClose, onTrain, o
       if (!isConnectionCorrect) console.log('  - 连接错误')
       if (alreadyUnlocked) console.log('  - 已经解锁过了')
     }
+  }
+
+  const handleShowNextHint = (): void => {
+    setShowHint(true)
+    setShowFloatingHint(false) // 点击灯泡后隐藏浮动提示
+    // 每次打开时自动切换到下一个提示
+    setHintIndex((prev) => (prev + 1) % 4)
+  }
+
+  const handleShowAnswer = (): void => {
+    // 检查是否已经购买过
+    if (hasPurchasedAnswer) {
+      setShowHint(false)
+      setShowAlreadyPurchased(true)
+      setTimeout(() => setShowAlreadyPurchased(false), 3000)
+      return
+    }
+    
+    // 检查金币是否足够
+    const currentCoins = parseInt(localStorage.getItem('player_coins') || '0')
+    if (currentCoins < 50) {
+      alert('金币不足！需要 50 金币')
+      setShowHint(false)
+      return
+    }
+    
+    // 扣除金币
+    const newCoins = currentCoins - 50
+    const userId = localStorage.getItem('user_id')
+    localStorage.setItem('player_coins', String(newCoins))
+    localStorage.setItem(`tutorial_answer_purchased_${userId}`, '1')
+    setDisplayCoins(newCoins)
+    setHasPurchasedAnswer(true)
+    
+    // 通知主关卡更新金币显示
+    onCoinsUpdate(newCoins)
+    
+    // 自动设置最优参数
+    setParams({
+      learningRate: 0.1,
+      batchSize: 32,
+      epochs: 20,
+      optimizer: 'Adam'
+    })
+    
+    setShowHint(false)
+    setShowCoinSpentNotice(true)
+    setTimeout(() => setShowCoinSpentNotice(false), 2500)
   }
 
   return (
@@ -175,10 +330,26 @@ const HiddenLevelModal: React.FC<HiddenLevelModalProps> = ({ onClose, onTrain, o
           {/* 左侧：伪代码 */}
           <div className="pseudocode-panel">
             <div className="panel-header">
-              <h3 className="panel-title">🔬 分类器核心代码</h3>
-              <button className="help-btn" onClick={() => setShowHelp(true)} title="玩法说明">
-                ℹ️
-              </button>
+              <h3 className="panel-title">🎛️ 分类器核心代码</h3>
+              <div className="header-buttons">
+                <div className="hint-button-wrapper">
+                  <button className="hint-btn" onClick={handleShowNextHint} title="优化提示">
+                    💡
+                  </button>
+                  {/* 浮动提示箭头 - 在小灯泡旁边 */}
+                  {accuracy !== null && accuracy < 94.5 && !hasReached95 && showFloatingHint && (
+                    <div className="floating-hint-arrow-beside" onClick={handleShowNextHint}>
+                      <div className="arrow-bubble">
+                        <span className="bubble-emoji">💡</span>
+                        <span className="bubble-text">点我提高正确率！</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <button className="help-btn" onClick={() => setShowHelp(true)} title="玩法说明">
+                  ℹ️
+                </button>
+              </div>
             </div>
             <div className="pseudocode-container">
               <pre className="pseudocode">
@@ -250,13 +421,19 @@ const HiddenLevelModal: React.FC<HiddenLevelModalProps> = ({ onClose, onTrain, o
                   onClick={handleTrain}
                   disabled={training}
                 >
-                  {training ? '训练中...' : '🚀 测试训练'}
+                  {training ? '测试中...' : '🚀 测试系统'}
                 </button>
                 <button 
-                  className="save-btn"
+                  className={`save-btn ${saved ? 'saved' : ''}`}
                   onClick={handleSave}
                 >
-                  💾 保存并应用
+                  {saved ? '✓ 已保存' : '💾 保存'}
+                </button>
+                <button 
+                  className="apply-btn"
+                  onClick={handleApply}
+                >
+                  ✅ 应用
                 </button>
               </div>
               
@@ -307,6 +484,35 @@ const HiddenLevelModal: React.FC<HiddenLevelModalProps> = ({ onClose, onTrain, o
           </div>
         </div>
 
+        {/* 优化提示弹窗 */}
+        {showHint && (
+          <div className="hint-overlay" onClick={() => setShowHint(false)}>
+            <div className="hint-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="hint-icon">💡</div>
+              <div className="hint-coins">🪙 {displayCoins}</div>
+              <h3 className="hint-title">{currentHint.param}</h3>
+              <div className="hint-content">
+                <div className="hint-tip">
+                  <strong>💡 优化建议：</strong>
+                  <p>{currentHint.tip}</p>
+                </div>
+                <div className="hint-effect">
+                  <strong>📊 参数效果：</strong>
+                  <p>{currentHint.effect}</p>
+                </div>
+              </div>
+              <div className="hint-buttons">
+                <button className="hint-answer-btn" onClick={handleShowAnswer}>
+                  🪙 花费50金币查看终极答案
+                </button>
+                <button className="hint-close" onClick={() => setShowHint(false)}>
+                  知道了
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* 玩法说明弹窗 */}
         {showHelp && (
           <div className="help-overlay" onClick={() => setShowHelp(false)}>
@@ -333,25 +539,15 @@ const HiddenLevelModal: React.FC<HiddenLevelModalProps> = ({ onClose, onTrain, o
                 <div className="help-section">
                   <div className="help-step">3️⃣</div>
                   <div className="help-text">
-                    <strong>保存并应用</strong>
-                    <p>找到最优参数后，点击"保存并应用"，这些参数会影响教学关卡的实际测试结果！</p>
+                    <strong>保存和应用</strong>
+                    <p>找到最优参数后，点击"保存"保存参数，点击"应用"将参数应用到教学关卡的实际测试结果！</p>
                   </div>
                 </div>
 
                 <div className="help-divider"></div>
 
-                <div className="help-tips">
-                  <div className="help-tips-title">💡 优化提示</div>
-                  <ul>
-                    <li><strong>学习率</strong>：过小收敛慢，过大不稳定，0.1 较优</li>
-                    <li><strong>批量大小</strong>：32 能平衡训练速度和稳定性</li>
-                    <li><strong>训练轮数</strong>：20 轮能充分学习数据特征</li>
-                    <li><strong>优化器</strong>：Adam 自适应学习率，效果最佳</li>
-                  </ul>
-                </div>
-
                 <div className="help-goal">
-                  <strong>🎯 目标：</strong>调整参数使准确率达到最高值 95%，然后应用到教学关卡中获得更高的分类正确率！
+                  <strong>🎯 目标：</strong>调整参数使准确率达到最高值 95%，然后应用到教学关卡中获得更高的分类正确率！点击左上角的💡按钮可以获取优化提示。
                 </div>
               </div>
 
@@ -371,6 +567,33 @@ const HiddenLevelModal: React.FC<HiddenLevelModalProps> = ({ onClose, onTrain, o
           icon={achievementUnlocked.icon}
           onClose={() => setAchievementUnlocked(null)}
         />
+      )}
+      
+      {/* 金币消费提示 */}
+      {showCoinSpentNotice && (
+        <div className="coin-spent-notice">
+          <div className="coin-spent-content">
+            <div className="coin-spent-icon">✨</div>
+            <div className="coin-spent-text">已花费 50 金币</div>
+            <div className="coin-spent-subtext">最优参数已自动设置</div>
+          </div>
+        </div>
+      )}
+      
+      {/* 已购买提示 */}
+      {showAlreadyPurchased && (
+        <div className="coin-spent-notice">
+          <div className="coin-spent-content">
+            <div className="coin-spent-icon">📋</div>
+            <div className="coin-spent-text">已购买过最优参数</div>
+            <div className="purchased-params">
+              <div className="param-item">learning_rate = 0.1</div>
+              <div className="param-item">batch_size = 32</div>
+              <div className="param-item">epochs = 20</div>
+              <div className="param-item">optimizer = "Adam"</div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
