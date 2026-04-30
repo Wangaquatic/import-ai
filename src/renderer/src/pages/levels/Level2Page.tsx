@@ -9,6 +9,8 @@ import { useZoom } from '../../hooks/useZoom'
 
 interface Level2PageProps {
   onBack: () => void
+  onNextLevel?: () => void
+  onPrevLevel?: () => void
 }
 
 interface Point {
@@ -48,7 +50,7 @@ const LEVEL2_REWARD_KEY = 'level2_reward_claimed'
 const LEVEL2_SAVE_KEY = 'level2_saved_state'
 const LEVEL2_HIDDEN_PARAMS_KEY = 'level2_hidden_params'
 
-const Level2Page: React.FC<Level2PageProps> = ({ onBack }) => {
+const Level2Page: React.FC<Level2PageProps> = ({ onBack, onNextLevel, onPrevLevel }) => {
   // 漂浮的二进制数字背景
   const particles = React.useMemo(() => {
     const binaries = ['0', '1', '01', '10', '001', '101', '110', '011', '100', '111', '0101', '1010', '1100', '0011']
@@ -831,17 +833,6 @@ const Level2Page: React.FC<Level2PageProps> = ({ onBack }) => {
             </span>
           </div>
         </div>
-        
-        {/* 底部按钮区域 */}
-        <div className="sidebar-bottom">
-          <button 
-            className="sidebar-bottom-btn clear-btn" 
-            onClick={handleClearAll}
-            disabled={testing}
-          >
-            🗑️ 清除
-          </button>
-        </div>
       </div>
 
       <div className="input-area" style={{ transform: `scale(${zoom})`, transformOrigin: 'center center' }}>
@@ -969,9 +960,29 @@ const Level2Page: React.FC<Level2PageProps> = ({ onBack }) => {
         </div>
       )}
 
-      <button className="trash-btn" onClick={handleClearLines} title="清除所有连线">
+      {/* 清除按钮 - 统一样式，右下角 */}
+      <button 
+        className="clear-all-btn" 
+        onClick={handleClearAll}
+        disabled={testing}
+        title="清除所有节点和连接"
+      >
         🗑️
       </button>
+
+      {/* 上一关按钮 */}
+      {onPrevLevel && (
+        <button className="prev-level-btn" onClick={onPrevLevel}>
+          ←上一关
+        </button>
+      )}
+
+      {/* 下一关按钮 */}
+      {onNextLevel && (
+        <button className="next-level-btn" onClick={onNextLevel}>
+          下一关→
+        </button>
+      )}
 
       <button className="speed-btn" onClick={handleSpeedChange}>
         ▶▶ {speedMultiplier.toFixed(1)}x

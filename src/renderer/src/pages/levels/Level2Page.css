@@ -515,29 +515,83 @@
   justify-content: center;
 }
 
-/* 垃圾桶清除按钮 */
-.level2-page .trash-btn {
-  position: fixed;
-  bottom: 30px;
-  right: 30px;
-  width: 50px;
-  height: 50px;
-  font-size: 24px;
-  background: rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 50%;
-  cursor: pointer;
-  z-index: 20;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+/* 清除按钮 - 统一样式，右下角圆形 */
+.level2-page .clear-all-btn {
+  position: fixed !important;
+  bottom: 30px !important;
+  right: 30px !important;
+  width: 56px !important;
+  height: 56px !important;
+  font-size: 24px !important;
+  background: transparent !important;
+  border: 2px solid rgba(239, 68, 68, 0.6) !important;
+  border-radius: 50% !important;
+  color: #ef4444 !important;
+  cursor: pointer !important;
+  z-index: 100 !important;
+  transition: all 0.2s ease !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 
-.level2-page .trash-btn:hover {
-  background: rgba(239, 68, 68, 0.5);
-  border-color: rgba(239, 68, 68, 0.8);
-  transform: scale(1.1);
+.level2-page .clear-all-btn:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.2) !important;
+  border-color: rgba(239, 68, 68, 0.8) !important;
+  transform: scale(1.1) !important;
+}
+
+.level2-page .clear-all-btn:disabled {
+  opacity: 0.5 !important;
+  cursor: not-allowed !important;
+}
+
+/* 下一关按钮 */
+.level2-page .next-level-btn {
+  position: fixed !important;
+  bottom: 30px !important;
+  right: 100px !important;
+  padding: 12px 20px !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  background: rgba(52, 211, 153, 0.8) !important;
+  border: 2px solid rgba(52, 211, 153, 1) !important;
+  border-radius: 28px !important;
+  color: #ffffff !important;
+  cursor: pointer !important;
+  z-index: 100 !important;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 4px 12px rgba(52, 211, 153, 0.3) !important;
+}
+
+.level2-page .next-level-btn:hover {
+  background: rgba(52, 211, 153, 1) !important;
+  transform: scale(1.05) !important;
+  box-shadow: 0 6px 16px rgba(52, 211, 153, 0.5) !important;
+}
+
+/* 上一关按钮 */
+.level2-page .prev-level-btn {
+  position: fixed !important;
+  bottom: 30px !important;
+  right: 220px !important;
+  padding: 12px 20px !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  background: rgba(96, 165, 250, 0.8) !important;
+  border: 2px solid rgba(96, 165, 250, 1) !important;
+  border-radius: 28px !important;
+  color: #ffffff !important;
+  cursor: pointer !important;
+  z-index: 100 !important;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 4px 12px rgba(96, 165, 250, 0.3) !important;
+}
+
+.level2-page .prev-level-btn:hover {
+  background: rgba(96, 165, 250, 1) !important;
+  transform: scale(1.05) !important;
+  box-shadow: 0 6px 16px rgba(96, 165, 250, 0.5) !important;
 }
 
 .level2-page .speed-btn {

@@ -10,6 +10,7 @@ import { useZoom } from '../../hooks/useZoom'
 interface Level1PageProps {
   onBack: () => void
   onNextLevel?: () => void
+  onPrevLevel?: () => void
 }
 
 interface Point { x: number; y: number }
@@ -36,7 +37,7 @@ const LEVEL1_REWARD_KEY = 'level1_reward_claimed'
 const LEVEL1_PASSED_KEY = 'level1_passed'
 const LEVEL1_SAVE_KEY = 'level1_saved_state'
 
-const Level1Page: React.FC<Level1PageProps> = ({ onBack, onNextLevel }) => {
+const Level1Page: React.FC<Level1PageProps> = ({ onBack, onNextLevel, onPrevLevel }) => {
   // 从localStorage加载保存的状态
   const loadSavedState = React.useCallback(() => {
     try {
@@ -792,6 +793,30 @@ const Level1Page: React.FC<Level1PageProps> = ({ onBack, onNextLevel }) => {
         )}
       </div>
 
+      {/* 清除按钮 - 统一样式，右下角 */}
+      <button 
+        className="clear-all-btn" 
+        onClick={handleClearAll}
+        disabled={testing}
+        title="清除所有节点和连接"
+      >
+        🗑️
+      </button>
+
+      {/* 上一关按钮 */}
+      {onPrevLevel && (
+        <button className="prev-level-btn" onClick={onPrevLevel}>
+          ←上一关
+        </button>
+      )}
+
+      {/* 下一关按钮 */}
+      {onNextLevel && (
+        <button className="next-level-btn" onClick={onNextLevel}>
+          下一关→
+        </button>
+      )}
+
       {/* 速度控制按钮 */}
       <button className="speed-btn" onClick={handleSpeedChange}>
         ▶▶ {speedMultiplier.toFixed(1)}x
@@ -1144,22 +1169,6 @@ const Level1Page: React.FC<Level1PageProps> = ({ onBack, onNextLevel }) => {
             </div>
           </div>
         </div>
-        
-        {/* 底部按钮区域 */}
-        <div className="sidebar-bottom">
-          <button 
-            className="sidebar-bottom-btn clear-btn" 
-            onClick={handleClearAll}
-            disabled={testing}
-          >
-            🗑️ 清除
-          </button>
-          {onNextLevel && (
-            <button className="sidebar-bottom-btn next-level-btn" onClick={onNextLevel}>
-              下一关 →
-            </button>
-          )}
-        </div>
       </div>
 
       {infoModal && (
@@ -1249,6 +1258,11 @@ const Level1Page: React.FC<Level1PageProps> = ({ onBack, onNextLevel }) => {
               </div>
             )}
           </div>
+          
+          {/* Skip按钮 */}
+          <button className="level3-tutorial-skip-btn" onClick={handleCloseTutorial}>
+            Skip
+          </button>
         </div>
       )}
     </div>

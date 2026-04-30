@@ -13,6 +13,7 @@ import { useZoom } from '../../hooks/useZoom'
 interface Level4PageProps {
   onBack: () => void
   onNextLevel?: () => void
+  onPrevLevel?: () => void
 }
 
 interface Point { x: number; y: number }
@@ -39,7 +40,7 @@ const LEVEL4_REWARD_KEY = 'level4_reward_claimed'
 const LEVEL4_PASSED_KEY = 'level4_passed'
 const LEVEL4_SAVE_KEY = 'level4_saved_state'
 
-const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel }) => {
+const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel, onPrevLevel }) => {
   // 从localStorage加载保存的状态
   const loadSavedState = React.useCallback(() => {
     try {
@@ -815,6 +816,30 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel }) => {
         )}
       </div>
 
+      {/* 清除按钮 - 统一样式，右下角 */}
+      <button 
+        className="clear-all-btn" 
+        onClick={handleClearAll}
+        disabled={testing}
+        title="清除所有节点和连接"
+      >
+        🗑️
+      </button>
+
+      {/* 上一关按钮 */}
+      {onPrevLevel && (
+        <button className="prev-level-btn" onClick={onPrevLevel}>
+          ←上一关
+        </button>
+      )}
+
+      {/* 下一关按钮 */}
+      {onNextLevel && (
+        <button className="next-level-btn" onClick={onNextLevel}>
+          下一关→
+        </button>
+      )}
+
       {/* 速度控制按钮 */}
       <button className="speed-btn" onClick={handleSpeedChange}>
         ▶▶ {speedMultiplier.toFixed(1)}x
@@ -1103,22 +1128,6 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel }) => {
               <span className="library-node-label">垃圾桶 ({getNodeCount('trash')}/1)</span>
             </div>
           </div>
-        </div>
-        
-        {/* 底部按钮区域 */}
-        <div className="sidebar-bottom">
-          <button 
-            className="sidebar-bottom-btn clear-btn" 
-            onClick={handleClearAll}
-            disabled={testing}
-          >
-            🗑️ 清除
-          </button>
-          {onNextLevel && (
-            <button className="sidebar-bottom-btn next-level-btn" onClick={onNextLevel}>
-              下一关 →
-            </button>
-          )}
         </div>
       </div>
 

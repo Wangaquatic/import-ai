@@ -597,11 +597,18 @@ const Level2CopyPage: React.FC<Level2CopyPageProps> = ({ onBack, onNextLevel }) 
         </div>
       )}
 
-      {/* 垃圾桶 */}
-      <button className="trash-btn" onClick={handleClearLines} title="清除所有连线">🗑️</button>
+      {/* 清除按钮 - 统一样式，右下角 */}
+      <button 
+        className="clear-all-btn" 
+        onClick={handleClearAll}
+        disabled={testing}
+        title="清除所有节点和连接"
+      >
+        🗑️
+      </button>
 
-      {/* 下一关 - 只有达标才显示 */}
-      {passed && <button className="next-level-btn" onClick={onNextLevel}>下一关 →</button>}
+      {/* 下一关按钮 - 统一样式，清除按钮左侧 */}
+      <button className="next-level-btn" onClick={onNextLevel}>下一关→</button>
 
       {/* 速度控制 */}
       <button className="speed-btn" onClick={handleSpeedChange}>
@@ -687,22 +694,6 @@ const Level2CopyPage: React.FC<Level2CopyPageProps> = ({ onBack, onNextLevel }) 
               分类器 ({placedNodes.find(n => n.type === 'classifier') ? '0/1' : '1/1'})
             </span>
           </div>
-        </div>
-        
-        {/* 底部按钮区域 */}
-        <div className="sidebar-bottom">
-          <button 
-            className="sidebar-bottom-btn clear-btn" 
-            onClick={handleClearAll}
-            disabled={testing}
-          >
-            🗑️ 清除
-          </button>
-          {onNextLevel && (
-            <button className="sidebar-bottom-btn next-level-btn" onClick={onNextLevel}>
-              下一关 →
-            </button>
-          )}
         </div>
       </div>
 
