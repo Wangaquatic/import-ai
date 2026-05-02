@@ -42,6 +42,38 @@ const ShopPage: React.FC<ShopPageProps> = ({ onBack }) => {
       icon: '🔧', 
       desc: '自动过滤训练数据中的噪声，提升模型准确率',
       purchased: false
+    },
+    { 
+      id: 3, 
+      name: '精华提取器', 
+      price: 80, 
+      icon: '🧪', 
+      desc: '保留核心信息，剔除冗余特征',
+      purchased: false
+    },
+    { 
+      id: 4, 
+      name: '压缩核心', 
+      price: 90, 
+      icon: '🗜️', 
+      desc: '降维缩小，用更少维度表达关键信息',
+      purchased: false
+    },
+    { 
+      id: 5, 
+      name: '聚合仪', 
+      price: 120, 
+      icon: '🛞', 
+      desc: '区域整合，将局部特征融合为全局表示',
+      purchased: false
+    },
+    { 
+      id: 6, 
+      name: '特征熔炉', 
+      price: 150, 
+      icon: '🔥', 
+      desc: '合成感：多源特征进入熔炉，炼成强力新特征',
+      purchased: false
     }
   ]
 

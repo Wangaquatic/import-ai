@@ -905,7 +905,7 @@
   transform: translateY(-2px);
 }
 
-/* 统一按钮样式 - 右下角 */
+/* 统一按钮样式 - 右下角 （已弃用，保留以免影响其他引用） */
 .level4-page .clear-all-btn {
   position: fixed !important;
   right: 30px !important;
@@ -982,4 +982,29 @@
   background: rgba(96, 165, 250, 1) !important;
   transform: scale(1.05) !important;
   box-shadow: 0 6px 16px rgba(96, 165, 250, 0.5) !important;
+}
+
+/* 隐藏关卡左侧节点库滚动条美化 */
+.level4-hidden-library::-webkit-scrollbar {
+  width: 7px;
+}
+.level4-hidden-library::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  margin: 4px 0;
+}
+.level4-hidden-library::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #60a5fa, #a78bfa);
+  border-radius: 4px;
+  box-shadow: inset 0 0 8px rgba(96, 165, 250, 0.5);
+}
+.level4-hidden-library::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #93c5fd, #c4b5fd);
+  box-shadow: inset 0 0 12px rgba(147, 197, 253, 0.7);
+}
+
+/* Firefox 兼容 */
+.level4-hidden-library {
+  scrollbar-width: thin;
+  scrollbar-color: #60a5fa rgba(0, 0, 0, 0.2);
 }

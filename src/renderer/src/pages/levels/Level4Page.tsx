@@ -34,6 +34,7 @@ interface Particle {
   progress: number
   speed: number
   done: boolean
+  passedClassifier: boolean // 修改：新增标记
 }
 
 const COINS_KEY = 'player_coins'
@@ -193,9 +194,6 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel, onPrevLeve
     }
 
     // 定义连接规则
-    // input-out 只能连到节点的 -in 或 output-in
-    // 节点的 -out1/-out2 只能连到其他节点的 -in 或 output-in
-    // 每个输出点只能发出一条线，但每个输入点可以接收多条线
     if (from === 'input-out' && id.endsWith('-in')) {
       setConnections(prev => [...prev.filter(c => c.from !== from), { from, to: id }])
     } else if (from.endsWith('-out1') || from.endsWith('-out2')) {
@@ -212,16 +210,13 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel, onPrevLeve
     const clickY = e.clientY
     const conn = connections[index]
     
-    // 获取连接线两端点的位置
     const from = getDotCenter(conn.from)
     const to = getDotCenter(conn.to)
     if (!from || !to) return
     
-    // 计算点击位置到两端点的距离
     const distToFrom = Math.sqrt(Math.pow(clickX - from.x, 2) + Math.pow(clickY - from.y, 2))
     const distToTo = Math.sqrt(Math.pow(clickX - to.x, 2) + Math.pow(clickY - to.y, 2))
     
-    // 如果点击位置距离任一端点小于30px，则不删除（保护连接点附近区域）
     if (distToFrom < 30 || distToTo < 30) {
       return
     }
@@ -236,7 +231,6 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel, onPrevLeve
       if (!from || !to) return <g key={i} />
       return (
         <g key={i}>
-          {/* 透明的粗线用于点击检测 */}
           <line
             x1={from.x}
             y1={from.y}
@@ -247,11 +241,10 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel, onPrevLeve
             strokeLinecap="round"
             style={{ 
               cursor: 'pointer', 
-              pointerEvents: draggingLine ? 'none' : 'stroke'  // 拖动时禁用点击
+              pointerEvents: draggingLine ? 'none' : 'stroke'
             }}
             onClick={(e) => handleDeleteConnection(i, e)}
           />
-          {/* 可见的细线 */}
           <line
             x1={from.x}
             y1={from.y}
@@ -316,7 +309,6 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel, onPrevLeve
         n.id === draggingPlacedNode.nodeId ? { ...n, pos: { x, y } } : n
       ))
 
-      // 检查是否在删除区域（右侧边栏）
       if (sidebarRef.current) {
         const sidebarRect = sidebarRef.current.getBoundingClientRect()
         const isOver = e.clientX >= sidebarRect.left
@@ -333,14 +325,13 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel, onPrevLeve
       const x = e.clientX - rect.left
       const y = e.clientY - rect.top
       
-      // 侧边栏宽度300px，左侧面板160px
       if (x > 160 && x < rect.width - 300 && y > 0 && y < rect.height) {
         if (getTotalNodes() < 8 && getNodeCount(draggingNode.type) < getNodeLimit(draggingNode.type)) {
           const newNode: PlacedNode = {
             id: `${draggingNode.type}-${Date.now()}`,
             type: draggingNode.type,
             pos: { x, y },
-            maxCapacity: draggingNode.type === 'trash' ? 10 : 5, // 垃圾桶容量10，其他5
+            maxCapacity: draggingNode.type === 'trash' ? 10 : 5,
             currentLoad: 0
           }
           setPlacedNodes([...placedNodes, newNode])
@@ -348,12 +339,9 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel, onPrevLeve
       }
       setDraggingNode(null)
     } else if (draggingPlacedNode) {
-      // 检查是否在删除区域
       if (isOverDeleteZone) {
         const nodeId = draggingPlacedNode.nodeId
-        // 删除节点
         setPlacedNodes(prev => prev.filter(n => n.id !== nodeId))
-        // 删除所有与该节点相关的连接线
         setConnections(prev => prev.filter(conn => 
           !conn.from.startsWith(nodeId) && !conn.to.startsWith(nodeId)
         ))
@@ -380,9 +368,7 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel, onPrevLeve
 
   const handleDeleteNode = (nodeId: string, e: React.MouseEvent) => {
     e.stopPropagation()
-    // 删除节点
     setPlacedNodes(prev => prev.filter(n => n.id !== nodeId))
-    // 删除所有与该节点相关的连接线
     setConnections(prev => prev.filter(conn => 
       !conn.from.startsWith(nodeId) && !conn.to.startsWith(nodeId)
     ))
@@ -397,7 +383,7 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel, onPrevLeve
   }
 
   const handleClearAll = () => {
-    if (testing) return // 测试中不允许清除
+    if (testing) return
     setPlacedNodes([])
     setConnections([])
   }
@@ -414,23 +400,19 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel, onPrevLeve
   }
 
   const handleReset = (): void => {
-    // 清除保存的状态
     localStorage.removeItem(LEVEL4_SAVE_KEY)
-    // 重置所有状态
     setPlacedNodes([])
     setConnections([])
     setTestParticles([])
     setElapsed(0)
     setTesting(false)
     setSaved(false)
-    // 显示重置提示
     setShowResetNotice(true)
     setTimeout(() => setShowResetNotice(false), 2000)
   }
 
   const handleTest = () => {
     if (testing) {
-      // 停止测试
       setTesting(false)
       if (animFrameRef.current) {
         cancelAnimationFrame(animFrameRef.current)
@@ -444,52 +426,45 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel, onPrevLeve
       return
     }
     
-    // 开始测试
     setTesting(true)
     setTargetCount(0)
     setTargetAccuracy(0)
     setElapsed(0)
     
-    // 初始化节点状态
     const nodeStates: Record<string, { queue: Array<{id: number, color: string}>; processing: boolean; nextOutput: 1 | 2 }> = {}
     placedNodes.forEach(node => {
       nodeStates[node.id] = { queue: [], processing: false, nextOutput: 1 }
     })
     nodeStateRef.current = nodeStates
     
-    // 启动计时器（显示真实经过的秒数）
     elapsedRef.current = 0
     timerRef.current = setInterval(() => {
       elapsedRef.current += 1
       setElapsed(elapsedRef.current)
     }, 1000)
     
-    // 创建500红+500蓝方块
     const particles: Particle[] = []
     particleIdRef.current = 0
     const colors = [...Array(500).fill('#ef4444'), ...Array(500).fill('#3b82f6')]
-    // 随机打乱
     for (let i = colors.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [colors[i], colors[j]] = [colors[j], colors[i]]
     }
     
-    // 保存颜色数组到ref供后续使用
     colorQueueRef.current = { colors, index: 0 }
     
-    // 从input-out开始的连接
     const inputConn = connections.find(c => c.from === 'input-out')
     if (inputConn) {
-      // 初始只创建前15个粒子，间隔发送
       for (let i = 0; i < Math.min(15, colors.length); i++) {
         particles.push({
           id: particleIdRef.current++,
           color: colors[i],
           from: inputConn.from,
           to: inputConn.to,
-          progress: -(i * 0.15), // 较大的间隔
-          speed: 0.004, // 基础速度，不预乘倍速
-          done: false
+          progress: -(i * 0.15),
+          speed: 0.004,
+          done: false,
+          passedClassifier: false // 修改：默认未经过分类器
         })
       }
       colorQueueRef.current.index = Math.min(15, colors.length)
@@ -497,21 +472,16 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel, onPrevLeve
     
     setTestParticles(particles)
     
-    // 使用ref来跟踪统计数据，避免闭包问题
     const statsRef = { redCount: 0, totalCount: 0 }
     
-    // 动画循环
     const animate = () => {
       setTestParticles(prev => {
         const next = [...prev]
         let hasChanges = false
         
-        // 检查是否需要从输入流补充新粒子
         const inputConn = connections.find(c => c.from === 'input-out')
         if (inputConn && colorQueueRef.current.index < colorQueueRef.current.colors.length) {
-          // 检查当前从input-out出发且未完成的粒子数量
           const inputParticles = next.filter(p => p.from === 'input-out' && !p.done && p.progress < 1)
-          // 如果少于8个，补充新粒子（一次只补充1-2个，保持稳定流速）
           if (inputParticles.length < 8) {
             const toAdd = Math.min(2, colorQueueRef.current.colors.length - colorQueueRef.current.index)
             for (let i = 0; i < toAdd; i++) {
@@ -520,53 +490,50 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel, onPrevLeve
                 color: colorQueueRef.current.colors[colorQueueRef.current.index++],
                 from: inputConn.from,
                 to: inputConn.to,
-                progress: -0.2, // 从较远的位置开始
-                speed: 0.004, // 基础速度，不预乘倍速
-                done: false
+                progress: -0.2,
+                speed: 0.004,
+                done: false,
+                passedClassifier: false // 修改：默认未经过分类器
               })
             }
             hasChanges = true
           }
         }
         
-        // 更新所有粒子
         for (let i = 0; i < next.length; i++) {
           const p = next[i]
           if (p.done) continue
           
-          // 检查粒子是否被阻塞
           let isBlocked = false
           if (p.progress >= 0.95 && p.progress < 1 && p.to.endsWith('-in')) {
             const nodeId = p.to.replace('-in', '')
             const nodeState = nodeStateRef.current[nodeId]
             const node = placedNodes.find(n => n.id === nodeId)
             if (node && nodeState && node.type !== 'trash') {
-              // 如果节点队列已满，粒子保持阻塞
               if (nodeState.queue.length >= node.maxCapacity) {
                 isBlocked = true
               }
             }
           }
           
-          // 移动粒子（使用当前倍速）
           if (p.progress < 1 && !isBlocked) {
             p.progress += p.speed * speedMultiplierRef.current
             hasChanges = true
           }
           
-          // 粒子到达终点
           if (p.progress >= 1 && !p.done) {
             p.done = true
             hasChanges = true
             
-            // 检查是否到达输出目标
             if (p.to === 'output-in') {
               statsRef.totalCount++
-              if (p.color === '#ef4444') statsRef.redCount++
+              // 修改：只统计红色且经过分类器的
+              if (p.color === '#ef4444' && p.passedClassifier) {
+                statsRef.redCount++
+              }
               setTargetCount(statsRef.totalCount)
               setTargetAccuracy(statsRef.totalCount > 0 ? (statsRef.redCount / statsRef.totalCount) * 100 : 0)
               
-              // 实时检查通关条件：100个方块，75%准确率
               const accuracy = statsRef.totalCount > 0 ? statsRef.redCount / statsRef.totalCount : 0
               
               if (statsRef.totalCount >= 100 && accuracy >= 0.75) {
@@ -577,96 +544,83 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel, onPrevLeve
                   rewardClaimed: rewardClaimed.current
                 })
                 
-                // 立即停止测试
                 if (timerRef.current) {
                   clearInterval(timerRef.current)
                   timerRef.current = null
                 }
                 
-                // 先更新状态
                 setTesting(false)
                 
-                // 发放金币奖励
-                // 注释掉"只能一次"的检查，用于测试
-                // if (!rewardClaimed.current) {
-                  if (!rewardClaimed.current) {
-                    rewardClaimed.current = true
-                    localStorage.setItem(LEVEL4_REWARD_KEY, '1')
-                    const newCoins = parseInt(localStorage.getItem(COINS_KEY) || '0') + 300
-                    localStorage.setItem(COINS_KEY, String(newCoins))
-                    setCoins(newCoins)
-                  }
-                  
-                  // 标记关卡已通过
-                  if (!levelPassed) {
-                    localStorage.setItem(LEVEL4_PASSED_KEY, '1')
-                    setLevelPassed(true)
-                  }
-                  
-                  console.log('Level4 显示奖励弹窗')
-                  
-                  // 使用setTimeout确保状态更新后再显示奖励
-                  setTimeout(() => {
-                    setShowVictory(true)
-                    setShowReward(true)
-                    console.log('Level4 奖励状态已设置')
-                    setTimeout(() => setShowReward(false), 3000)
-                  }, 100)
-                // }
+                if (!rewardClaimed.current) {
+                  rewardClaimed.current = true
+                  localStorage.setItem(LEVEL4_REWARD_KEY, '1')
+                  const newCoins = parseInt(localStorage.getItem(COINS_KEY) || '0') + 300
+                  localStorage.setItem(COINS_KEY, String(newCoins))
+                  setCoins(newCoins)
+                }
                 
-                // 返回空数组停止所有粒子
+                if (!levelPassed) {
+                  localStorage.setItem(LEVEL4_PASSED_KEY, '1')
+                  setLevelPassed(true)
+                }
+                
+                console.log('Level4 显示奖励弹窗')
+                
+                setTimeout(() => {
+                  setShowVictory(true)
+                  setShowReward(true)
+                  console.log('Level4 奖励状态已设置')
+                  setTimeout(() => setShowReward(false), 3000)
+                }, 100)
+                
                 return []
               }
             } else if (p.to.endsWith('-in')) {
-              // 到达节点输入
               const nodeId = p.to.replace('-in', '')
               const node = placedNodes.find(n => n.id === nodeId)
               const nodeState = nodeStateRef.current[nodeId]
               
               if (node && nodeState) {
-                // 垃圾桶直接丢弃
                 if (node.type === 'trash') {
                   continue
                 }
                 
-                // 检查节点容量，如果已满则不添加
                 if (nodeState.queue.length < node.maxCapacity) {
                   nodeState.queue.push({ id: p.id, color: p.color })
                   
-                  // 更新节点负载显示
                   setPlacedNodes(prev => prev.map(n => 
                     n.id === nodeId ? { ...n, currentLoad: nodeState.queue.length } : n
                   ))
                   
-                  // 如果节点未在处理，开始处理
                   if (!nodeState.processing && nodeState.queue.length > 0) {
                     nodeState.processing = true
                     
-                    // 分类器延迟500ms，平衡器延迟10ms
                     const delay = node.type === 'classifier' ? 500 : 10
                     
                     const processQueue = () => {
                       if (nodeState.queue.length > 0) {
                         const item = nodeState.queue.shift()!
                         
-                        // 更新节点负载显示
                         setPlacedNodes(prev => prev.map(n => 
                           n.id === nodeId ? { ...n, currentLoad: nodeState.queue.length } : n
                         ))
                         
                         let outputNum: 1 | 2
                         if (node.type === 'classifier') {
-                          // 分类器：红色走output1，蓝色走output2
                           outputNum = item.color === '#ef4444' ? 1 : 2
                         } else {
-                          // 平衡器：轮询
                           outputNum = nodeState.nextOutput
                           nodeState.nextOutput = outputNum === 1 ? 2 : 1
                         }
                         
-                        // 找到输出连接
                         const outputConn = connections.find(c => c.from === `${nodeId}-out${outputNum}`)
                         if (outputConn) {
+                          // 修改：判断是否通过分类器的红色通道
+                          let newPassedClassifier = false
+                          if (node.type === 'classifier' && outputNum === 1 && item.color === '#ef4444') {
+                            newPassedClassifier = true
+                          }
+                          
                           setTestParticles(current => [
                             ...current,
                             {
@@ -675,13 +629,13 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel, onPrevLeve
                               from: outputConn.from,
                               to: outputConn.to,
                               progress: 0,
-                              speed: 0.004, // 基础速度，不预乘倍速
-                              done: false
+                              speed: 0.004,
+                              done: false,
+                              passedClassifier: newPassedClassifier
                             }
                           ])
                         }
                         
-                        // 继续处理队列中的下一个
                         if (nodeState.queue.length > 0) {
                           setTimeout(processQueue, delay)
                         } else {
@@ -695,8 +649,7 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel, onPrevLeve
                     setTimeout(processQueue, delay)
                   }
                 } else {
-                  // 节点已满，粒子被阻塞，保持在输入端
-                  p.progress = 0.95 // 停在输入端附近，不标记为done
+                  p.progress = 0.95
                   hasChanges = true
                 }
               }
@@ -704,8 +657,6 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel, onPrevLeve
           }
         }
         
-        // 检查是否全部完成或超时（时间限制根据倍速调整：倍速越大，时限越小）
-        // elapsed是真实秒数，elapsed * speedMultiplier 是加速后的等效时间
         const timeLimit = 180
         const effectiveElapsed = elapsedRef.current * speedMultiplierRef.current
         const allParticlesDone = next.every(p => p.done)
@@ -715,11 +666,9 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel, onPrevLeve
           setTesting(false)
           if (timerRef.current) clearInterval(timerRef.current)
           
-          // 检查是否超时
           if (effectiveElapsed >= timeLimit) {
             setShowTimeout(true)
           } else {
-            // 所有粒子完成但未通关（通关成功已在实时检查中处理）
             if (statsRef.totalCount < 100 || statsRef.redCount / statsRef.totalCount < 0.75) {
               setShowTimeout(true)
             }
@@ -728,7 +677,6 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel, onPrevLeve
           return next
         }
         
-        // 继续动画循环
         animFrameRef.current = requestAnimationFrame(animate)
         
         return next
@@ -780,7 +728,6 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel, onPrevLeve
     >
       <div className="bg-blur-layer" style={{ backgroundImage: `url(${levelBg})` }} />
       
-      {/* SVG overlay for lines */}
       <svg
         style={{
           position: 'fixed',
@@ -815,7 +762,6 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel, onPrevLeve
 
       <button className="back-button" onClick={onBack}>← 返回</button>
       
-      {/* 隐藏关卡按钮 - 左下角 */}
       <button className="hidden-level-btn" onClick={() => setShowHiddenLevel(true)} title="隐藏关卡">
         🎛️
       </button>
@@ -823,14 +769,12 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel, onPrevLeve
       <div className="node-counter">{getTotalNodes()}/8</div>
       <div className="coins-display">💰 {coins}</div>
 
-      {/* 商店按钮 */}
       {onShop && (
         <button className="shop-button" onClick={onShop} title="商店">
           🛒
         </button>
       )}
 
-      {/* 缩放指示器 */}
       <div className="zoom-indicator">
         <span>🔍 {Math.round(zoom * 100)}%</span>
         {zoom !== 1.0 && (
@@ -840,36 +784,33 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel, onPrevLeve
         )}
       </div>
 
-      {/* 清除按钮 - 统一样式，右下角 */}
+      {/* 修改：移除独立的clear-all-btn，改在侧边栏 */}
       <button 
         className="clear-all-btn" 
         onClick={handleClearAll}
         disabled={testing}
         title="清除所有节点和连接"
+        style={{ display: 'none' }} // 临时隐藏，如有需要可删除此行
       >
         🗑️
       </button>
 
-      {/* 上一关按钮 */}
       {onPrevLevel && (
         <button className="prev-level-btn" onClick={onPrevLevel}>
           上一关
         </button>
       )}
 
-      {/* 下一关按钮 */}
       {onNextLevel && (
         <button className="next-level-btn" onClick={onNextLevel}>
           下一关
         </button>
       )}
 
-      {/* 速度控制按钮 */}
       <button className="speed-btn" onClick={handleSpeedChange}>
         ▶▶ {speedMultiplier.toFixed(1)}x
       </button>
 
-      {/* 超时弹窗 */}
       {showTimeout && (
         <div className="timeout-overlay" onClick={() => setShowTimeout(false)}>
           <div className="timeout-modal" onClick={e => e.stopPropagation()}>
@@ -883,7 +824,6 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel, onPrevLeve
         </div>
       )}
 
-      {/* 奖励弹窗 */}
       {showReward && (
         <div className="reward-popup">
           <div className="reward-icon">🎉</div>
@@ -900,6 +840,7 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel, onPrevLeve
             <div
               ref={setDotRef('input-out')}
               className="dot dot-right"
+              style={{ zIndex: 999 }} // 修改：提高层级防止被弹窗遮挡
               onMouseDown={(e) => onDotMouseDown(e, 'input-out')}
               onMouseUp={(e) => onDotMouseUp(e, 'input-out')}
             />
@@ -913,6 +854,7 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel, onPrevLeve
             <div
               ref={setDotRef('output-in')}
               className="dot dot-left"
+              style={{ zIndex: 999 }} // 修改：提高层级防止被弹窗遮挡
               onMouseDown={(e) => onDotMouseDown(e, 'output-in')}
               onMouseUp={(e) => onDotMouseUp(e, 'output-in')}
             />
@@ -938,7 +880,6 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel, onPrevLeve
         </div>
       </div>
 
-      {/* 已放置的节点 */}
       {placedNodes.map(node => (
         <div
           key={node.id}
@@ -955,7 +896,6 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel, onPrevLeve
           onMouseDown={(e) => handlePlacedNodeMouseDown(node.id, e)}
           onDoubleClick={(e) => handleDeleteNode(node.id, e)}
         >
-          {/* 输入连接点 */}
           <div
             ref={setDotRef(`${node.id}-in`)}
             className="dot dot-left"
@@ -978,7 +918,6 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel, onPrevLeve
               draggable={false} 
             />
 
-            {/* 说明按钮 */}
             <button
               className="info-btn"
               style={{ position: 'absolute', top: '5px', left: '5px' }}
@@ -990,7 +929,6 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel, onPrevLeve
               i
             </button>
 
-            {/* 处理时间显示 */}
             <div style={{
               position: 'absolute',
               top: '5px',
@@ -1006,7 +944,6 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel, onPrevLeve
               {node.type === 'classifier' ? '0.5s' : node.type === 'balancer' ? '10ms' : '-'}
             </div>
 
-            {/* 进度条 - 横向显示在中间靠右 */}
             {testing && (
               <div style={{
                 position: 'absolute',
@@ -1037,10 +974,8 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel, onPrevLeve
             )}
           </div>
 
-          {/* 输出连接点 - 只有balancer和classifier有输出 */}
           {node.type !== 'trash' && (
             <>
-              {/* 输出连接点1 (上) - 对齐图片上的绿点 */}
               <div
                 ref={setDotRef(`${node.id}-out1`)}
                 className="dot dot-right"
@@ -1055,7 +990,6 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel, onPrevLeve
                 onMouseUp={(e) => onDotMouseUp(e, `${node.id}-out1`)}
               />
 
-              {/* 输出连接点2 (下) - 对齐图片上的绿点 */}
               <div
                 ref={setDotRef(`${node.id}-out2`)}
                 className="dot dot-right"
@@ -1074,7 +1008,6 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel, onPrevLeve
         </div>
       ))}
 
-      {/* 拖动预览 */}
       {draggingNode && pageRef.current && (
         <div
           style={{
@@ -1208,19 +1141,15 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel, onPrevLeve
         </div>
       )}
       
-      {/* 隐藏关卡弹窗 */}
       {showHiddenLevel && (
         <Level4HiddenModal onClose={() => setShowHiddenLevel(false)} />
       )}
       
-      {/* 教程引导 */}
       {showTutorial && (
         <div className="level4-tutorial-overlay">
           <div className="level4-tutorial-content">
-            {/* 步骤1-2: 显示单个分类器处理数据流 + 慢速标记 */}
             {tutorialStep >= 1 && tutorialStep < 3 && (
               <div className="level4-tutorial-single-classifier">
-                {/* 输入数据流 */}
                 <div className="level4-tutorial-input-stream">
                   <div className="level4-tutorial-particle-flow">
                     <div className="level4-tutorial-particle red" style={{ animationDelay: '0s' }} />
@@ -1232,7 +1161,6 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel, onPrevLeve
                   </div>
                 </div>
                 
-                {/* 分类器 */}
                 <div className="level4-tutorial-classifier-box">
                   分类器
                   {tutorialStep >= 2 && (
@@ -1240,12 +1168,10 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel, onPrevLeve
                   )}
                 </div>
                 
-                {/* 输出数据流 */}
                 <div className="level4-tutorial-output-stream" />
               </div>
             )}
             
-            {/* 步骤3: 显示问号和提示 */}
             {tutorialStep === 3 && (
               <div className="level4-tutorial-hint">
                 <div className="level4-tutorial-question">?</div>
@@ -1256,18 +1182,15 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel, onPrevLeve
               </div>
             )}
             
-            {/* 步骤4: 显示均衡器+多分类器解决方案 */}
             {tutorialStep >= 4 && (
               <div className="level4-tutorial-solution">
                 <div className="level4-tutorial-parallel-system">
-                  {/* 均衡器 */}
                   <div className="level4-tutorial-balancer-icon">
                     均衡器
                   </div>
                   
                   <div className="level4-tutorial-arrow">→</div>
                   
-                  {/* 多个分类器 */}
                   <div className="level4-tutorial-classifiers">
                     <div className="level4-tutorial-mini-classifier">分类器1</div>
                     <div className="level4-tutorial-mini-classifier">分类器2</div>
@@ -1286,14 +1209,12 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel, onPrevLeve
             )}
           </div>
           
-          {/* Skip按钮 */}
           <button className="level4-tutorial-skip-btn" onClick={handleCloseTutorial}>
             Skip
           </button>
         </div>
       )}
 
-      {/* 重置提示 */}
       {showResetNotice && (
         <div className="reset-notice">
           <div className="reset-icon">🔄</div>
