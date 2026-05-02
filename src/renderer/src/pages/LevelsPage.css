@@ -4,9 +4,21 @@
   padding: 30px 40px !important;
   box-sizing: border-box;
   overflow: hidden !important;
-  background: linear-gradient(135deg, #0f3460 0%, #1a5276 40%, #1f618d 70%, #0d2137 100%);
+  position: relative;
   display: flex !important;
   flex-direction: column !important;
+}
+
+.levels-page::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url('../assets/level-background.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  filter: blur(3px) brightness(0.6);
+  z-index: -1;
 }
 
 .levels-page .page-header {

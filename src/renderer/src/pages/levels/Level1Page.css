@@ -144,6 +144,7 @@
   cursor: not-allowed;
 }
 
+/* 下一关按钮 - 圆形箭头 */
 /* 下一关按钮 - 统一样式，清除按钮左侧 */
 .level1-tutorial-page .next-level-btn {
   position: fixed;
@@ -171,6 +172,7 @@
   border-color: rgba(52, 211, 153, 1);
   transform: scale(1.05);
   box-shadow: 0 6px 16px rgba(52, 211, 153, 0.5);
+}
 }
 
 /* 速度按钮 */

@@ -936,46 +936,50 @@
   cursor: not-allowed !important;
 }
 
+/* 下一关按钮 */
 .level4-page .next-level-btn {
   position: fixed !important;
   right: 100px !important;
   bottom: 30px !important;
-  padding: 12px 24px !important;
-  font-size: 16px !important;
-  font-weight: 600 !important;
-  background: rgba(34, 197, 94, 0.2) !important;
-  border: 2px solid rgba(34, 197, 94, 0.5) !important;
-  border-radius: 8px !important;
-  color: #22c55e !important;
+  padding: 12px 20px !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  background: rgba(52, 211, 153, 0.8) !important;
+  border: 2px solid rgba(52, 211, 153, 1) !important;
+  border-radius: 28px !important;
+  color: #ffffff !important;
   cursor: pointer !important;
   z-index: 100 !important;
-  transition: all 0.3s ease !important;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 4px 12px rgba(52, 211, 153, 0.3) !important;
 }
 
 .level4-page .next-level-btn:hover {
-  background: rgba(34, 197, 94, 0.35) !important;
-  border-color: rgba(34, 197, 94, 0.7) !important;
-  transform: translateY(-2px) !important;
+  background: rgba(52, 211, 153, 1) !important;
+  transform: scale(1.05) !important;
+  box-shadow: 0 6px 16px rgba(52, 211, 153, 0.5) !important;
 }
 
+/* 上一关按钮 */
 .level4-page .prev-level-btn {
   position: fixed !important;
-  right: 220px !important;
+  right: 190px !important;
   bottom: 30px !important;
-  padding: 12px 24px !important;
-  font-size: 16px !important;
-  font-weight: 600 !important;
-  background: rgba(59, 130, 246, 0.2) !important;
-  border: 2px solid rgba(59, 130, 246, 0.5) !important;
-  border-radius: 8px !important;
-  color: #3b82f6 !important;
+  padding: 12px 20px !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  background: rgba(96, 165, 250, 0.8) !important;
+  border: 2px solid rgba(96, 165, 250, 1) !important;
+  border-radius: 28px !important;
+  color: #ffffff !important;
   cursor: pointer !important;
   z-index: 100 !important;
-  transition: all 0.3s ease !important;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 4px 12px rgba(96, 165, 250, 0.3) !important;
 }
 
 .level4-page .prev-level-btn:hover {
-  background: rgba(59, 130, 246, 0.35) !important;
-  border-color: rgba(59, 130, 246, 0.7) !important;
-  transform: translateY(-2px) !important;
+  background: rgba(96, 165, 250, 1) !important;
+  transform: scale(1.05) !important;
+  box-shadow: 0 6px 16px rgba(96, 165, 250, 0.5) !important;
 }

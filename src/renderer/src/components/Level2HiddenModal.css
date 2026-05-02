@@ -41,7 +41,7 @@
 /* 浮动提示气泡 - 在小灯泡旁边 */
 .floating-hint-arrow-beside {
   position: absolute;
-  left: 50px;
+  right: 50px;
   top: -5px;
   cursor: pointer;
   animation: gentleBounce 2s ease-in-out infinite;

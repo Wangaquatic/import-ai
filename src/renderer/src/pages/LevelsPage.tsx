@@ -24,7 +24,7 @@ const LevelsPage: React.FC<LevelsPageProps> = ({ onBack, onNavigate }) => {
         <button className="back-button" onClick={onBack}>
           ← 返回
         </button>
-        <h1 className="page-title">📚 关卡挑战</h1>
+        <h1 className="page-title">🎮 关卡挑战</h1>
       </div>
 
       <div className="levels-grid">

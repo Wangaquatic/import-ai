@@ -113,6 +113,7 @@ const Level2Page: React.FC<Level2PageProps> = ({ onBack, onNextLevel, onPrevLeve
   const [draggingFromLibrary, setDraggingFromLibrary] = useState<DraggingNodeState | null>(null)
   const [draggingPlacedNode, setDraggingPlacedNode] = useState<{ nodeId: string; offsetX: number; offsetY: number } | null>(null)
   const [showHiddenLevel, setShowHiddenLevel] = useState(false)
+  const [showResetNotice, setShowResetNotice] = useState(false)
   const [elapsed, setElapsed] = useState(0)
   const [showTutorial, setShowTutorial] = useState(true) // 每次进入都显示教程
   const [tutorialStep, setTutorialStep] = useState(0)
@@ -527,8 +528,9 @@ const Level2Page: React.FC<Level2PageProps> = ({ onBack, onNextLevel, onPrevLeve
     setTesting(false)
     setCurrentColorMode('red')
     setSelectedColors({ red: true, green: false, blue: false })
-    // 提示用户
-    alert('第二关已重置！')
+    // 显示重置提示
+    setShowResetNotice(true)
+    setTimeout(() => setShowResetNotice(false), 2000)
   }
 
   const handleClearAll = (): void => {
@@ -1005,14 +1007,14 @@ const Level2Page: React.FC<Level2PageProps> = ({ onBack, onNextLevel, onPrevLeve
       {/* 上一关按钮 */}
       {onPrevLevel && (
         <button className="prev-level-btn" onClick={onPrevLevel}>
-          ←上一关
+          上一关
         </button>
       )}
 
       {/* 下一关按钮 */}
       {onNextLevel && (
         <button className="next-level-btn" onClick={onNextLevel}>
-          下一关→
+          下一关
         </button>
       )}
 
@@ -1100,6 +1102,14 @@ const Level2Page: React.FC<Level2PageProps> = ({ onBack, onNextLevel, onPrevLeve
           <button className="level2-tutorial-skip-btn" onClick={handleCloseTutorial}>
             Skip
           </button>
+        </div>
+      )}
+
+      {/* 重置提示 */}
+      {showResetNotice && (
+        <div className="reset-notice">
+          <div className="reset-icon">🔄</div>
+          <div className="reset-text">关卡已重置</div>
         </div>
       )}
     </div>

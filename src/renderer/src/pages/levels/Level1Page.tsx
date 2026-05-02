@@ -101,6 +101,7 @@ const Level2CopyPage: React.FC<Level2CopyPageProps> = ({ onBack, onNextLevel, on
   const [showHiddenLevel, setShowHiddenLevel] = useState(false)
   const [draggingFromLibrary, setDraggingFromLibrary] = useState<DraggingNodeState | null>(null)
   const [draggingPlacedNode, setDraggingPlacedNode] = useState<{ nodeId: string; offsetX: number; offsetY: number } | null>(null)
+  const [showResetNotice, setShowResetNotice] = useState(false)
 
   // 金币更新回调
   const handleCoinsUpdate = (newCoins: number) => {
@@ -292,8 +293,9 @@ const Level2CopyPage: React.FC<Level2CopyPageProps> = ({ onBack, onNextLevel, on
     setElapsed(0)
     setTesting(false)
     setSaved(false)
-    // 提示用户
-    alert('第一关已重置！')
+    // 显示重置提示
+    setShowResetNotice(true)
+    setTimeout(() => setShowResetNotice(false), 2000)
   }
 
   const handleClearLines = () => setConnections([])
@@ -622,6 +624,14 @@ const Level2CopyPage: React.FC<Level2CopyPageProps> = ({ onBack, onNextLevel, on
         </div>
       )}
 
+      {/* 重置提示 */}
+      {showResetNotice && (
+        <div className="reset-notice">
+          <div className="reset-icon">🔄</div>
+          <div className="reset-text">关卡已重置</div>
+        </div>
+      )}
+
       {/* 清除按钮 - 统一样式，右下角 */}
       <button 
         className="clear-all-btn" 
@@ -632,8 +642,8 @@ const Level2CopyPage: React.FC<Level2CopyPageProps> = ({ onBack, onNextLevel, on
         🗑️
       </button>
 
-      {/* 下一关按钮 - 统一样式，清除按钮左侧 */}
-      <button className="next-level-btn" onClick={onNextLevel}>下一关→</button>
+      {/* 下一关按钮 */}
+      <button className="next-level-btn" onClick={onNextLevel}>下一关</button>
 
       {/* 速度控制 */}
       <button className="speed-btn" onClick={handleSpeedChange}>

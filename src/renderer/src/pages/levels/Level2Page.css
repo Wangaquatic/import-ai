@@ -68,7 +68,7 @@
   display: flex;
   flex-direction: row;
   gap: 12px;
-  padding: 20px 16px;
+  padding: min(20px, 2vh);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
@@ -83,6 +83,7 @@
   transition: all 0.2s ease;
 }
 
+/* 测试按钮 - 使用统一样式 */
 .level2-page .toolbar-btn.test-btn {
   background: rgba(96, 165, 250, 0.2);
   border: 1px solid rgba(96, 165, 250, 0.5);
@@ -100,6 +101,7 @@
   cursor: not-allowed;
 }
 
+/* 保存按钮 - 使用统一样式 */
 .level2-page .toolbar-btn.save-btn {
   background: rgba(52, 211, 153, 0.2);
   border: 1px solid rgba(52, 211, 153, 0.5);
@@ -115,11 +117,11 @@
   color: #fff;
 }
 
+/* 重置按钮 - 使用统一样式 */
 .level2-page .toolbar-btn.reset-btn {
   background: rgba(251, 146, 60, 0.2);
   border: 1px solid rgba(251, 146, 60, 0.5);
   color: #fb923c;
-  padding: 8px 12px;
 }
 
 .level2-page .toolbar-btn.reset-btn:hover {
@@ -546,6 +548,7 @@
   cursor: not-allowed !important;
 }
 
+/* 下一关按钮 - 圆形箭头 */
 /* 下一关按钮 */
 .level2-page .next-level-btn {
   position: fixed !important;
@@ -574,7 +577,7 @@
 .level2-page .prev-level-btn {
   position: fixed !important;
   bottom: 30px !important;
-  right: 220px !important;
+  right: 190px !important;
   padding: 12px 20px !important;
   font-size: 15px !important;
   font-weight: 700 !important;

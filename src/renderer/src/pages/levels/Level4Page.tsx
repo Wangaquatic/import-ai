@@ -130,6 +130,7 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel, onPrevLeve
   const [speedMultiplier, setSpeedMultiplier] = useState(1.0)
   const [showTimeout, setShowTimeout] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [showResetNotice, setShowResetNotice] = useState(false)
   
   // 缩放功能
   const { zoom, resetZoom } = useZoom(0.5, 2.0, 0.1)
@@ -422,8 +423,9 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel, onPrevLeve
     setElapsed(0)
     setTesting(false)
     setSaved(false)
-    // 提示用户
-    alert('第四关已重置！')
+    // 显示重置提示
+    setShowResetNotice(true)
+    setTimeout(() => setShowResetNotice(false), 2000)
   }
 
   const handleTest = () => {
@@ -851,14 +853,14 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel, onPrevLeve
       {/* 上一关按钮 */}
       {onPrevLevel && (
         <button className="prev-level-btn" onClick={onPrevLevel}>
-          ←上一关
+          上一关
         </button>
       )}
 
       {/* 下一关按钮 */}
       {onNextLevel && (
         <button className="next-level-btn" onClick={onNextLevel}>
-          下一关→
+          下一关
         </button>
       )}
 
@@ -1288,6 +1290,14 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel, onPrevLeve
           <button className="level4-tutorial-skip-btn" onClick={handleCloseTutorial}>
             Skip
           </button>
+        </div>
+      )}
+
+      {/* 重置提示 */}
+      {showResetNotice && (
+        <div className="reset-notice">
+          <div className="reset-icon">🔄</div>
+          <div className="reset-text">关卡已重置</div>
         </div>
       )}
     </div>
