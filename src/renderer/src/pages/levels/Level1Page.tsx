@@ -13,6 +13,7 @@ import { useZoom } from '../../hooks/useZoom'
 interface Level2CopyPageProps {
   onBack: () => void
   onNextLevel: () => void
+  onShop?: () => void
 }
 
 interface Point { x: number; y: number }
@@ -40,7 +41,7 @@ const TUTORIAL_REWARD_KEY = 'level2copy_tutorial_reward_claimed'
 const TUTORIAL_PASSED_KEY = 'level2copy_tutorial_passed'
 const HIDDEN_PARAMS_KEY = 'level2copy_tutorial_hidden_params'
 
-const Level2CopyPage: React.FC<Level2CopyPageProps> = ({ onBack, onNextLevel }) => {
+const Level2CopyPage: React.FC<Level2CopyPageProps> = ({ onBack, onNextLevel, onShop }) => {
   const particles = React.useMemo(() => {
     const binaries = ['0', '1', '01', '10', '001', '101', '110', '011', '100', '111', '0101', '1010', '1100', '0011']
     return Array.from({ length: 15 }, (_, i) => ({
@@ -276,6 +277,23 @@ const Level2CopyPage: React.FC<Level2CopyPageProps> = ({ onBack, onNextLevel }) 
     localStorage.setItem(SAVE_KEY, JSON.stringify({ connections, pos, placedNodes }))
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
+  }
+
+  const handleReset = (): void => {
+    // 清除保存的状态
+    localStorage.removeItem(SAVE_KEY)
+    // 重置所有状态
+    setPos({ x: 400, y: 300 })
+    setConnections([])
+    setPlacedNodes([])
+    setTestParticles([])
+    setTargetProgress(0)
+    setNoTargetProgress(0)
+    setElapsed(0)
+    setTesting(false)
+    setSaved(false)
+    // 提示用户
+    alert('第一关已重置！')
   }
 
   const handleClearLines = () => setConnections([])
@@ -575,6 +593,13 @@ const Level2CopyPage: React.FC<Level2CopyPageProps> = ({ onBack, onNextLevel }) 
       {/* 金币显示 */}
       <div className="coins-display">🪙 {coins}</div>
 
+      {/* 商店按钮 */}
+      {onShop && (
+        <button className="shop-button" onClick={onShop} title="商店">
+          🛒
+        </button>
+      )}
+
       {/* 缩放指示器 */}
       <div className="zoom-indicator">
         <span>🔍 {Math.round(zoom * 100)}%</span>
@@ -681,6 +706,9 @@ const Level2CopyPage: React.FC<Level2CopyPageProps> = ({ onBack, onNextLevel }) 
           </button>
           <button className={`sidebar-btn save-btn ${saved ? 'saved' : ''}`} onClick={handleSave}>
             {saved ? '已保存 ✓' : '保存'}
+          </button>
+          <button className="sidebar-btn reset-btn" onClick={handleReset} title="重置关卡">
+            🔄
           </button>
         </div>
         <div className="sidebar-content">

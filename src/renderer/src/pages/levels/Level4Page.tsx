@@ -14,6 +14,7 @@ interface Level4PageProps {
   onBack: () => void
   onNextLevel?: () => void
   onPrevLevel?: () => void
+  onShop?: () => void
 }
 
 interface Point { x: number; y: number }
@@ -40,7 +41,7 @@ const LEVEL4_REWARD_KEY = 'level4_reward_claimed'
 const LEVEL4_PASSED_KEY = 'level4_passed'
 const LEVEL4_SAVE_KEY = 'level4_saved_state'
 
-const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel, onPrevLevel }) => {
+const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel, onPrevLevel, onShop }) => {
   // 从localStorage加载保存的状态
   const loadSavedState = React.useCallback(() => {
     try {
@@ -409,6 +410,20 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel, onPrevLeve
     localStorage.setItem(LEVEL4_SAVE_KEY, JSON.stringify(saveData))
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
+  }
+
+  const handleReset = (): void => {
+    // 清除保存的状态
+    localStorage.removeItem(LEVEL4_SAVE_KEY)
+    // 重置所有状态
+    setPlacedNodes([])
+    setConnections([])
+    setTestParticles([])
+    setElapsed(0)
+    setTesting(false)
+    setSaved(false)
+    // 提示用户
+    alert('第四关已重置！')
   }
 
   const handleTest = () => {
@@ -806,6 +821,13 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel, onPrevLeve
       <div className="node-counter">{getTotalNodes()}/8</div>
       <div className="coins-display">💰 {coins}</div>
 
+      {/* 商店按钮 */}
+      {onShop && (
+        <button className="shop-button" onClick={onShop} title="商店">
+          🛒
+        </button>
+      )}
+
       {/* 缩放指示器 */}
       <div className="zoom-indicator">
         <span>🔍 {Math.round(zoom * 100)}%</span>
@@ -1089,6 +1111,9 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel, onPrevLeve
           </button>
           <button className={`sidebar-btn save-btn ${saved ? 'saved' : ''}`} onClick={handleSave}>
             {saved ? '已保存 ✓' : '保存'}
+          </button>
+          <button className="sidebar-btn reset-btn" onClick={handleReset} title="重置关卡">
+            🔄
           </button>
         </div>
         <div className="sidebar-content">

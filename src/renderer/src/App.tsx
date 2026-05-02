@@ -62,10 +62,10 @@ function AppContent(): React.JSX.Element {
       }}>
         {currentPage === 'home' && <HomePage onNavigate={navigateTo} />}
         {currentPage === 'levels' && <LevelsPage onBack={goHome} onNavigate={navigateTo} />}
-        {currentPage === 'level1' && <Level1Page onBack={() => navigateTo('levels')} onNextLevel={() => navigateTo('level2')} />}
-        {currentPage === 'level2' && <Level2Page onBack={() => navigateTo('levels')} onNextLevel={() => navigateTo('level3')} onPrevLevel={() => navigateTo('level1')} />}
-        {currentPage === 'level3' && <Level3Page onBack={() => navigateTo('levels')} onNextLevel={() => navigateTo('level4')} onPrevLevel={() => navigateTo('level2')} />}
-        {currentPage === 'level4' && <Level4Page onBack={() => navigateTo('levels')} onNextLevel={() => navigateTo('levels')} onPrevLevel={() => navigateTo('level3')} />}
+        {currentPage === 'level1' && <Level1Page onBack={() => navigateTo('levels')} onNextLevel={() => navigateTo('level2')} onShop={() => navigateTo('shop')} />}
+        {currentPage === 'level2' && <Level2Page onBack={() => navigateTo('levels')} onNextLevel={() => navigateTo('level3')} onPrevLevel={() => navigateTo('level1')} onShop={() => navigateTo('shop')} />}
+        {currentPage === 'level3' && <Level3Page onBack={() => navigateTo('levels')} onNextLevel={() => navigateTo('level4')} onPrevLevel={() => navigateTo('level2')} onShop={() => navigateTo('shop')} />}
+        {currentPage === 'level4' && <Level4Page onBack={() => navigateTo('levels')} onNextLevel={() => navigateTo('levels')} onPrevLevel={() => navigateTo('level3')} onShop={() => navigateTo('shop')} />}
         {currentPage === 'shop' && <ShopPage onBack={goHome} />}
         {currentPage === 'profile' && <ProfilePage onBack={goHome} />}
       </div>

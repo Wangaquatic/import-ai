@@ -11,6 +11,7 @@ interface Level2PageProps {
   onBack: () => void
   onNextLevel?: () => void
   onPrevLevel?: () => void
+  onShop?: () => void
 }
 
 interface Point {
@@ -50,7 +51,7 @@ const LEVEL2_REWARD_KEY = 'level2_reward_claimed'
 const LEVEL2_SAVE_KEY = 'level2_saved_state'
 const LEVEL2_HIDDEN_PARAMS_KEY = 'level2_hidden_params'
 
-const Level2Page: React.FC<Level2PageProps> = ({ onBack, onNextLevel, onPrevLevel }) => {
+const Level2Page: React.FC<Level2PageProps> = ({ onBack, onNextLevel, onPrevLevel, onShop }) => {
   // 漂浮的二进制数字背景
   const particles = React.useMemo(() => {
     const binaries = ['0', '1', '01', '10', '001', '101', '110', '011', '100', '111', '0101', '1010', '1100', '0011']
@@ -113,6 +114,8 @@ const Level2Page: React.FC<Level2PageProps> = ({ onBack, onNextLevel, onPrevLeve
   const [draggingPlacedNode, setDraggingPlacedNode] = useState<{ nodeId: string; offsetX: number; offsetY: number } | null>(null)
   const [showHiddenLevel, setShowHiddenLevel] = useState(false)
   const [elapsed, setElapsed] = useState(0)
+  const [showTutorial, setShowTutorial] = useState(true) // 每次进入都显示教程
+  const [tutorialStep, setTutorialStep] = useState(0)
   
   // 缩放功能
   const { zoom, resetZoom } = useZoom(0.5, 2.0, 0.1)
@@ -150,6 +153,28 @@ const Level2Page: React.FC<Level2PageProps> = ({ onBack, onNextLevel, onPrevLeve
     const timer = setTimeout(() => forceUpdate(n => n + 1), 100)
     return () => clearTimeout(timer)
   }, [])
+
+  // 教程动画序列
+  useEffect(() => {
+    if (!showTutorial) return
+    
+    const timers: NodeJS.Timeout[] = []
+    
+    // 步骤1: 显示数据流和问题 (1秒后)
+    timers.push(setTimeout(() => setTutorialStep(1), 500))
+    
+    // 步骤2: 显示混乱的数据 (3秒后)
+    timers.push(setTimeout(() => setTutorialStep(2), 2500))
+    
+    // 步骤3: 显示专家系统解决方案 (5秒后)
+    timers.push(setTimeout(() => setTutorialStep(3), 5000))
+    
+    return () => timers.forEach(t => clearTimeout(t))
+  }, [showTutorial])
+  
+  const handleCloseTutorial = () => {
+    setShowTutorial(false)
+  }
 
   // 监听窗口大小变化，更新连接线（但不在初始化时触发）
   useEffect(() => {
@@ -782,6 +807,13 @@ const Level2Page: React.FC<Level2PageProps> = ({ onBack, onNextLevel, onPrevLeve
       <div className="node-counter">{placedNodes.length}/2</div>
       <div className="coins-display">🪙 {coins}</div>
 
+      {/* 商店按钮 */}
+      {onShop && (
+        <button className="shop-button" onClick={onShop} title="商店">
+          🛒
+        </button>
+      )}
+
       {/* 缩放指示器 */}
       <div className="zoom-indicator">
         <span>🔍 {Math.round(zoom * 100)}%</span>
@@ -1015,6 +1047,60 @@ const Level2Page: React.FC<Level2PageProps> = ({ onBack, onNextLevel, onPrevLeve
           currentColorMode={currentColorMode}
           onCoinsUpdate={setCoins}
         />
+      )}
+
+      {/* 教程引导 */}
+      {showTutorial && (
+        <div className="level2-tutorial-overlay">
+          <div className="level2-tutorial-content">
+            {/* 步骤1: 显示数据流和问题 */}
+            {tutorialStep >= 1 && tutorialStep < 3 && (
+              <>
+                <div className="level2-tutorial-data-stream">
+                  <div className="level2-tutorial-data red">🔴</div>
+                  <div className="level2-tutorial-data green">🟢</div>
+                  <div className="level2-tutorial-data blue">🔵</div>
+                  <div className="level2-tutorial-data red">🔴</div>
+                  <div className="level2-tutorial-data green">🟢</div>
+                </div>
+                
+                {/* 步骤2: 显示混乱的数据 */}
+                {tutorialStep >= 2 && (
+                  <div className="level2-tutorial-problem">
+                    <div className="level2-tutorial-x-mark">✗</div>
+                    <div className="level2-tutorial-text">
+                      数据混乱，需要清洗和分类...
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+            
+            {/* 步骤3: 显示专家系统解决方案 */}
+            {tutorialStep >= 3 && (
+              <div className="level2-tutorial-solution">
+                <div className="level2-tutorial-expert-icon">
+                  <img src={level2Expert} alt="专家系统" style={{ width: '100px', borderRadius: '8px' }} />
+                </div>
+                <div className="level2-tutorial-solution-text">
+                  使用<span className="level2-tutorial-highlight">专家系统</span>进行数据清洗！
+                </div>
+                <div className="level2-tutorial-desc">
+                  专家系统可以根据规则过滤和分类数据，<br/>
+                  将有用的数据传递给输出，无用的数据丢弃到垃圾桶
+                </div>
+                <button className="level2-tutorial-btn" onClick={handleCloseTutorial}>
+                  我明白了
+                </button>
+              </div>
+            )}
+          </div>
+          
+          {/* Skip按钮 */}
+          <button className="level2-tutorial-skip-btn" onClick={handleCloseTutorial}>
+            Skip
+          </button>
+        </div>
       )}
     </div>
   )

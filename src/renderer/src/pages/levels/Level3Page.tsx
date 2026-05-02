@@ -11,6 +11,7 @@ interface Level1PageProps {
   onBack: () => void
   onNextLevel?: () => void
   onPrevLevel?: () => void
+  onShop?: () => void
 }
 
 interface Point { x: number; y: number }
@@ -37,7 +38,7 @@ const LEVEL1_REWARD_KEY = 'level1_reward_claimed'
 const LEVEL1_PASSED_KEY = 'level1_passed'
 const LEVEL1_SAVE_KEY = 'level1_saved_state'
 
-const Level1Page: React.FC<Level1PageProps> = ({ onBack, onNextLevel, onPrevLevel }) => {
+const Level1Page: React.FC<Level1PageProps> = ({ onBack, onNextLevel, onPrevLevel, onShop }) => {
   // 从localStorage加载保存的状态
   const loadSavedState = React.useCallback(() => {
     try {
@@ -392,6 +393,20 @@ const Level1Page: React.FC<Level1PageProps> = ({ onBack, onNextLevel, onPrevLeve
     localStorage.setItem(LEVEL1_SAVE_KEY, JSON.stringify(saveData))
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
+  }
+
+  const handleReset = (): void => {
+    // 清除保存的状态
+    localStorage.removeItem(LEVEL1_SAVE_KEY)
+    // 重置所有状态
+    setPlacedNodes([])
+    setConnections([])
+    setTestParticles([])
+    setElapsed(0)
+    setTesting(false)
+    setSaved(false)
+    // 提示用户
+    alert('第三关已重置！')
   }
 
   const handleTest = () => {
@@ -783,6 +798,13 @@ const Level1Page: React.FC<Level1PageProps> = ({ onBack, onNextLevel, onPrevLeve
       <div className="node-counter">{placedNodes.length}/3</div>
       <div className="coins-display">🪙 {coins}</div>
 
+      {/* 商店按钮 */}
+      {onShop && (
+        <button className="shop-button" onClick={onShop} title="商店">
+          🛒
+        </button>
+      )}
+
       {/* 缩放指示器 */}
       <div className="zoom-indicator">
         <span>🔍 {Math.round(zoom * 100)}%</span>
@@ -847,18 +869,7 @@ const Level1Page: React.FC<Level1PageProps> = ({ onBack, onNextLevel, onPrevLeve
 
       {/* 计时器 */}
       {(testing || elapsed > 0) && (
-        <div style={{
-          position: 'fixed',
-          top: '20px',
-          left: '280px',
-          background: 'rgba(0, 0, 0, 0.7)',
-          color: '#fff',
-          padding: '8px 16px',
-          borderRadius: '8px',
-          fontSize: '18px',
-          fontWeight: 'bold',
-          zIndex: 100
-        }}>
+        <div className="timer-display">
           ⏱ {Math.floor(elapsed / 60).toString().padStart(2, '0')}:{(elapsed % 60).toString().padStart(2, '0')} / {Math.floor(40 / speedMultiplier / 60).toString().padStart(2, '0')}:{Math.floor(40 / speedMultiplier % 60).toString().padStart(2, '0')}
         </div>
       )}
@@ -1154,6 +1165,9 @@ const Level1Page: React.FC<Level1PageProps> = ({ onBack, onNextLevel, onPrevLeve
           </button>
           <button className={`sidebar-btn save-btn ${saved ? 'saved' : ''}`} onClick={handleSave}>
             {saved ? '已保存 ✓' : '保存'}
+          </button>
+          <button className="sidebar-btn reset-btn" onClick={handleReset} title="重置关卡">
+            🔄
           </button>
         </div>
         <div className="sidebar-content">

@@ -99,32 +99,63 @@
   top: 20px;
   left: 170px;
   padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba(250, 204, 21, 0.5);
+  border: 2px solid rgba(250, 204, 21, 0.6);
   border-radius: 20px;
   color: #facc15;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 700;
   z-index: 100;
-  letter-spacing: 1px;
 }
 
 /* 节点计数器 */
 .level-base .node-counter {
   position: fixed;
   top: 20px;
-  left: 230px;
-  padding: 8px 20px;
+  left: 250px;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba(96, 165, 250, 0.5);
-  border-radius: 20px;
+  border: 2px solid rgba(96, 165, 250, 0.6);
+  border-radius: 50%;
   color: #60a5fa;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
   z-index: 100;
-  letter-spacing: 2px;
 }
 
+/* 商店按钮 */
+.level-base .shop-button {
+  position: fixed;
+  top: 20px;
+  left: 320px;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(139, 92, 246, 0.2);
+  border: 2px solid rgba(139, 92, 246, 0.6);
+  border-radius: 50%;
+  color: #a78bfa;
+  font-size: 20px;
+  cursor: pointer;
+  z-index: 100;
+  transition: all 0.3s ease;
+  padding: 0;
+}
+
+.level-base .shop-button:hover {
+  background: rgba(139, 92, 246, 0.4);
+  border-color: rgba(139, 92, 246, 0.8);
+  transform: scale(1.1);
+}
 
 /* 速度控制按钮 */
 .level-base .speed-btn {
@@ -152,15 +183,15 @@
 
 /* 计时器 */
 .level-base .timer-display {
-  top: 20px;     /* 改为top */
-  bottom: auto;  /* 取消bottom */
-  left: 700px;   /* 具体位置 */
-  transform: none; /* 取消居中变换 */
-  padding: 6px 18px;
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 20px;
   font-size: 16px;
   font-weight: 700;
   background: rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.3);
   border-radius: 20px;
   color: #ffffff;
   z-index: 20;
@@ -309,6 +340,16 @@
 .level-base .save-btn.saved {
   background: rgba(52, 211, 153, 0.4);
   color: #fff;
+}
+
+.level-base .reset-btn {
+  background: rgba(251, 146, 60, 0.2);
+  border: 1px solid rgba(251, 146, 60, 0.5);
+  color: #fb923c;
+}
+
+.level-base .reset-btn:hover {
+  background: rgba(251, 146, 60, 0.35);
 }
 
 .level-base .sidebar-content {
