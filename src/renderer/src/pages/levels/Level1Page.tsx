@@ -436,6 +436,7 @@ const Level2CopyPage: React.FC<Level2CopyPageProps> = ({ onBack, onNextLevel, on
             if (isPass) {
               everPassed.current = true
               localStorage.setItem(TUTORIAL_PASSED_KEY, '1')
+              localStorage.setItem('level1_completed', '1')
               setPassed(true)
               setTestResult('pass')
             } else {
@@ -443,7 +444,10 @@ const Level2CopyPage: React.FC<Level2CopyPageProps> = ({ onBack, onNextLevel, on
             }
           } else {
             // 已通关过，静默更新 passed 状态
-            if (isPass) setPassed(true)
+            if (isPass) {
+              setPassed(true)
+              localStorage.setItem('level1_completed', '1')
+            }
           }
           // 发放金币奖励（只能一次）
           if (isPass && !rewardClaimed.current) {
@@ -613,7 +617,7 @@ const Level2CopyPage: React.FC<Level2CopyPageProps> = ({ onBack, onNextLevel, on
       </div>
 
       {/* 节点计数器 */}
-      <div className="node-counter">{1 - placedNodes.length}/1</div>
+      <div className="node-counter">{placedNodes.length}/1</div>
 
       {/* 奖励弹窗 */}
       {showReward && (

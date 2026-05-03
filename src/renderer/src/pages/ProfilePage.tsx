@@ -14,23 +14,45 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
   const [currentCoins, setCurrentCoins] = useState(() => 
     parseInt(localStorage.getItem('player_coins') || '0')
   )
+  const [levelsCompleted, setLevelsCompleted] = useState(() => {
+    let completed = 0
+    if (localStorage.getItem('level1_completed')) completed++
+    if (localStorage.getItem('level2_completed')) completed++
+    if (localStorage.getItem('level3_completed')) completed++
+    if (localStorage.getItem('level4_completed')) completed++
+    return completed
+  })
 
-  // 监听localStorage变化，实时更新金币数
+  // 监听localStorage变化，实时更新金币数和关卡进度
   React.useEffect(() => {
     const updateCoins = () => {
       const coins = parseInt(localStorage.getItem('player_coins') || '0')
       setCurrentCoins(coins)
     }
 
-    // 定时检查金币变化
-    const interval = setInterval(updateCoins, 100)
+    const updateLevelsCompleted = () => {
+      let completed = 0
+      if (localStorage.getItem('level1_completed')) completed++
+      if (localStorage.getItem('level2_completed')) completed++
+      if (localStorage.getItem('level3_completed')) completed++
+      if (localStorage.getItem('level4_completed')) completed++
+      setLevelsCompleted(completed)
+    }
+
+    // 定时检查金币和关卡进度变化
+    const interval = setInterval(() => {
+      updateCoins()
+      updateLevelsCompleted()
+    }, 100)
 
     // 监听storage事件（跨标签页同步）
     window.addEventListener('storage', updateCoins)
+    window.addEventListener('storage', updateLevelsCompleted)
 
     return () => {
       clearInterval(interval)
       window.removeEventListener('storage', updateCoins)
+      window.removeEventListener('storage', updateLevelsCompleted)
     }
   }, [])
 
@@ -97,7 +119,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
     level: user.level,
     experience: user.experience,
     coins: currentCoins,
-    completedLevels: getMainLevelsCompleted(),
+    completedLevels: levelsCompleted,
     totalLevels: 4,
     hiddenLevelsCompleted: getHiddenLevelsCompleted(),
     totalHiddenLevels: 3,

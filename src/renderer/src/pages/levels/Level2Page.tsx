@@ -47,6 +47,7 @@ interface DraggingNodeState {
 }
 
 const COINS_KEY = 'player_coins'
+const LEVEL2_PASSED_KEY = 'level2_passed'
 const LEVEL2_REWARD_KEY = 'level2_reward_claimed'
 const LEVEL2_SAVE_KEY = 'level2_saved_state'
 const LEVEL2_HIDDEN_PARAMS_KEY = 'level2_hidden_params'

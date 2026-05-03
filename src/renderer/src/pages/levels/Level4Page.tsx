@@ -561,6 +561,7 @@ const Level4Page: React.FC<Level4PageProps> = ({ onBack, onNextLevel, onPrevLeve
                 
                 if (!levelPassed) {
                   localStorage.setItem(LEVEL4_PASSED_KEY, '1')
+                  localStorage.setItem('level4_completed', '1')
                   setLevelPassed(true)
                 }
                 

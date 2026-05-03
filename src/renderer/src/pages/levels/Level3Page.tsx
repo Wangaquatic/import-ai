@@ -34,15 +34,15 @@ interface Particle {
 }
 
 const COINS_KEY = 'player_coins'
-const LEVEL1_REWARD_KEY = 'level1_reward_claimed'
-const LEVEL1_PASSED_KEY = 'level1_passed'
-const LEVEL1_SAVE_KEY = 'level1_saved_state'
+const LEVEL3_REWARD_KEY = 'level3_reward_claimed'
+const LEVEL3_PASSED_KEY = 'level3_passed'
+const LEVEL3_SAVE_KEY = 'level3_saved_state'
 
 const Level1Page: React.FC<Level1PageProps> = ({ onBack, onNextLevel, onPrevLevel, onShop }) => {
   // 从localStorage加载保存的状态
   const loadSavedState = React.useCallback(() => {
     try {
-      const saved = localStorage.getItem(LEVEL1_SAVE_KEY)
+      const saved = localStorage.getItem(LEVEL3_SAVE_KEY)
       if (saved) {
         return JSON.parse(saved)
       }
@@ -55,19 +55,19 @@ const Level1Page: React.FC<Level1PageProps> = ({ onBack, onNextLevel, onPrevLeve
   const savedState = loadSavedState()
 
   const [coins, setCoins] = useState(() => parseInt(localStorage.getItem(COINS_KEY) || '0'))
-  const rewardClaimed = React.useRef(!!localStorage.getItem(LEVEL1_REWARD_KEY))
-  const [levelPassed, setLevelPassed] = useState(() => !!localStorage.getItem(LEVEL1_PASSED_KEY))
+  const rewardClaimed = React.useRef(!!localStorage.getItem(LEVEL3_REWARD_KEY))
+  const [levelPassed, setLevelPassed] = useState(() => !!localStorage.getItem(LEVEL3_PASSED_KEY))
   const [showTutorial, setShowTutorial] = useState(true) // 每次进入都显示
   const [tutorialStep, setTutorialStep] = useState(0)
   
   // 调试：打印初始状态
   useEffect(() => {
-    console.log('Level1 初始化:', {
+    console.log('Level3 初始化:', {
       coins,
       rewardClaimed: rewardClaimed.current,
       levelPassed: levelPassed,
-      rewardKey: localStorage.getItem(LEVEL1_REWARD_KEY),
-      passedKey: localStorage.getItem(LEVEL1_PASSED_KEY),
+      rewardKey: localStorage.getItem(LEVEL3_REWARD_KEY),
+      passedKey: localStorage.getItem(LEVEL3_PASSED_KEY),
       onNextLevel: !!onNextLevel
     })
     
@@ -75,10 +75,10 @@ const Level1Page: React.FC<Level1PageProps> = ({ onBack, onNextLevel, onPrevLeve
     const handleKeyPress = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.key === 'r') {
         e.preventDefault()
-        localStorage.removeItem(LEVEL1_REWARD_KEY)
+        localStorage.removeItem(LEVEL3_REWARD_KEY)
         rewardClaimed.current = false
-        console.log('✅ Level1 奖励状态已重置')
-        alert('Level1 奖励状态已重置，可以重新测试')
+        console.log('✅ Level3 奖励状态已重置')
+        alert('Level3 奖励状态已重置，可以重新测试')
       }
     }
     window.addEventListener('keydown', handleKeyPress)
@@ -391,14 +391,14 @@ const Level1Page: React.FC<Level1PageProps> = ({ onBack, onNextLevel, onPrevLeve
       placedNodes,
       timestamp: Date.now()
     }
-    localStorage.setItem(LEVEL1_SAVE_KEY, JSON.stringify(saveData))
+    localStorage.setItem(LEVEL3_SAVE_KEY, JSON.stringify(saveData))
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
   }
 
   const handleReset = (): void => {
     // 清除保存的状态
-    localStorage.removeItem(LEVEL1_SAVE_KEY)
+    localStorage.removeItem(LEVEL3_SAVE_KEY)
     // 重置所有状态
     setPlacedNodes([])
     setConnections([])
@@ -572,7 +572,7 @@ const Level1Page: React.FC<Level1PageProps> = ({ onBack, onNextLevel, onPrevLeve
               const allTargetsComplete = Object.values(targetStats).every(s => s.total >= 8 && (s.correct / s.total) === 1)
               
               if (allTargetsComplete) {
-                console.log('Level1 通关！', { 
+                console.log('Level3 通关！', { 
                   rewardClaimed: rewardClaimed.current,
                   targetStats 
                 })
@@ -586,33 +586,31 @@ const Level1Page: React.FC<Level1PageProps> = ({ onBack, onNextLevel, onPrevLeve
                 // 先更新状态
                 setTesting(false)
                 
-                // 发放金币奖励
-                // 注释掉"只能一次"的检查，用于测试
-                // if (!rewardClaimed.current) {
-                  if (!rewardClaimed.current) {
-                    rewardClaimed.current = true
-                    localStorage.setItem(LEVEL1_REWARD_KEY, '1')
-                    const newCoins = parseInt(localStorage.getItem(COINS_KEY) || '0') + 150
-                    localStorage.setItem(COINS_KEY, String(newCoins))
-                    setCoins(newCoins)
-                  }
-                  
-                  // 标记关卡已通过
-                  if (!levelPassed) {
-                    localStorage.setItem(LEVEL1_PASSED_KEY, '1')
-                    setLevelPassed(true)
-                  }
-                  
-                  console.log('Level1 显示奖励弹窗')
-                  
-                  // 使用setTimeout确保状态更新后再显示奖励
-                  setTimeout(() => {
-                    setShowVictory(true)
-                    setShowReward(true)
-                    console.log('Level1 奖励状态已设置')
-                    setTimeout(() => setShowReward(false), 3000)
-                  }, 100)
-                // }
+                // 发放金币奖励（只能一次）
+                if (!rewardClaimed.current) {
+                  rewardClaimed.current = true
+                  localStorage.setItem(LEVEL3_REWARD_KEY, '1')
+                  const newCoins = parseInt(localStorage.getItem(COINS_KEY) || '0') + 150
+                  localStorage.setItem(COINS_KEY, String(newCoins))
+                  setCoins(newCoins)
+                }
+                
+                // 标记关卡已通过（每次通关都保存）
+                localStorage.setItem(LEVEL3_PASSED_KEY, '1')
+                localStorage.setItem('level3_completed', '1')
+                if (!levelPassed) {
+                  setLevelPassed(true)
+                }
+                
+                console.log('Level3 显示奖励弹窗')
+                
+                // 使用setTimeout确保状态更新后再显示奖励
+                setTimeout(() => {
+                  setShowVictory(true)
+                  setShowReward(true)
+                  console.log('Level3 奖励状态已设置')
+                  setTimeout(() => setShowReward(false), 3000)
+                }, 100)
                 
                 // 标记所有粒子为完成，并返回空数组
                 return []
