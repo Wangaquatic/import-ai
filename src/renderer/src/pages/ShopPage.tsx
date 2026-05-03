@@ -9,6 +9,9 @@ interface ShopPageProps {
 const ShopPage: React.FC<ShopPageProps> = ({ onBack }) => {
   const { user } = useAuth()
   const [coins, setCoins] = useState(() => parseInt(localStorage.getItem('player_coins') || '0'))
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [showFailModal, setShowFailModal] = useState(false)
+  const [purchasedItemName, setPurchasedItemName] = useState('')
 
   // 监听localStorage变化，实时更新金币数
   React.useEffect(() => {
@@ -82,9 +85,10 @@ const ShopPage: React.FC<ShopPageProps> = ({ onBack }) => {
       const newCoins = coins - item.price
       setCoins(newCoins)
       localStorage.setItem('player_coins', String(newCoins))
-      alert(`✅ 成功购买 ${item.name}！`)
+      setPurchasedItemName(item.name)
+      setShowSuccessModal(true)
     } else {
-      alert('❌ 积分不足！')
+      setShowFailModal(true)
     }
   }
 
@@ -141,6 +145,34 @@ const ShopPage: React.FC<ShopPageProps> = ({ onBack }) => {
           </div>
         </div>
       </div>
+
+      {/* 购买成功提示 */}
+      {showSuccessModal && (
+        <div className="purchase-success-overlay" onClick={() => setShowSuccessModal(false)}>
+          <div className="purchase-success-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="purchase-success-icon">✅</div>
+            <div className="purchase-success-title">购买成功！</div>
+            <div className="purchase-success-text">成功购买 {purchasedItemName}</div>
+            <button className="purchase-success-btn" onClick={() => setShowSuccessModal(false)}>
+              确定
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 积分不足提示 */}
+      {showFailModal && (
+        <div className="purchase-success-overlay" onClick={() => setShowFailModal(false)}>
+          <div className="purchase-fail-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="purchase-fail-icon">❌</div>
+            <div className="purchase-fail-title">积分不足</div>
+            <div className="purchase-fail-text">请先完成关卡获取更多积分</div>
+            <button className="purchase-fail-btn" onClick={() => setShowFailModal(false)}>
+              知道了
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
