@@ -1008,3 +1008,63 @@
   scrollbar-width: thin;
   scrollbar-color: #60a5fa rgba(0, 0, 0, 0.2);
 }
+
+/* ===== 修复隐藏关卡弹窗兼容性 ===== */
+
+/* 1. 强制弹窗居中，限制最大宽高 */
+.level4-hidden-overlay {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.level4-hidden-modal {
+  max-width: 90vw !important;
+  max-height: 90vh !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;   /* 弹窗自身不滚动 */
+  position: relative !important;
+}
+
+/* 2. 内容区域用 flex 填满剩余空间 */
+.level4-hidden-content {
+  flex: 1 !important;
+  display: flex !important;
+  gap: 12px !important;
+  overflow: hidden !important;   /* 内部滚动交给子容器处理 */
+  min-height: 0 !important;      /* 防止 flex 溢出 */
+}
+
+/* 3. 左侧节点库（确保不盖住右边区域） */
+.level4-hidden-library {
+  width: 220px !important;
+  max-width: 30vw !important;
+  overflow-y: auto !important;
+  flex-shrink: 0 !important;
+}
+
+/* 4. 右侧画布区域自适应 */
+.level4-hidden-canvas-wrapper {
+  flex: 1 !important;
+  position: relative !important;
+  overflow: hidden !important;
+  min-width: 0 !important;
+}
+
+/* 5. 底部按钮固定在弹窗内，不与画布重叠 */
+.level4-hidden-done {
+  margin-top: auto !important;
+  align-self: center !important;
+  margin-bottom: 10px !important;
+}
+
+/* 6. 画布内的连接点提高层级，避免被按钮或其他元素遮挡 */
+.level4-hidden-canvas-wrapper .dot {
+  z-index: 999 !important;
+}
+
+/* 7. （可选）如果还有“重置”按钮在画布里，也提升层级 */
+.level4-hidden-canvas-wrapper button {
+  z-index: 100 !important;
+}
