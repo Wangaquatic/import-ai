@@ -105,6 +105,9 @@ const Level2Page: React.FC<Level2PageProps> = ({ onBack, onNextLevel, onPrevLeve
   const [trainingProgress, setTrainingProgress] = useState(0)
   const [coins, setCoins] = useState(() => parseInt(localStorage.getItem(COINS_KEY) || '0'))
   const [showReward, setShowReward] = useState(false)
+  const [testResult, setTestResult] = useState<'pass' | 'fail' | null>(null)
+  const [passed, setPassed] = useState(() => !!localStorage.getItem(LEVEL2_PASSED_KEY))
+  const everPassed = useRef(!!localStorage.getItem(LEVEL2_PASSED_KEY))
   const [selectedColors, setSelectedColors] = useState(savedState?.selectedColors || { red: true, green: false, blue: true })
   const [placedNodes, setPlacedNodes] = useState<PlacedNode[]>(savedState?.placedNodes || [])
   const [speedMultiplier, setSpeedMultiplier] = useState(1.0)
@@ -677,6 +680,26 @@ const Level2Page: React.FC<Level2PageProps> = ({ onBack, onNextLevel, onPrevLeve
           const finalAccuracyMultiplier = calculateAccuracyMultiplier()
           const finalCorrectRate = finalBaseCorrectRate * finalAccuracyMultiplier
 
+          // 判断是否通过（正确率≥85%）
+          const isPass = finalCorrectRate >= 0.85
+
+          // 已通关过：不再弹任何结果弹窗
+          if (!everPassed.current) {
+            if (isPass) {
+              everPassed.current = true
+              localStorage.setItem(LEVEL2_PASSED_KEY, '1')
+              localStorage.setItem('level2_completed', '1')
+              setPassed(true)
+              setTestResult('pass')
+            } else {
+              setTestResult('fail')
+            }
+          } else {
+            // 已通关过，静默更新 passed 状态
+            if (isPass) setPassed(true)
+          }
+
+          // 发放金币奖励（只能一次）
           if (finalCorrectRate >= 1.0 && !rewardClaimed.current) {
             rewardClaimed.current = true
             localStorage.setItem(LEVEL2_REWARD_KEY, '1')
@@ -1102,6 +1125,36 @@ const Level2Page: React.FC<Level2PageProps> = ({ onBack, onNextLevel, onPrevLeve
           <button className="level2-tutorial-skip-btn" onClick={handleCloseTutorial}>
             Skip
           </button>
+        </div>
+      )}
+
+      {/* 测试结果弹窗 */}
+      {testResult && (
+        <div className="info-overlay" onClick={() => setTestResult(null)}>
+          <div className="info-modal result-modal" onClick={e => e.stopPropagation()}>
+            {testResult === 'pass' ? (
+              <>
+                <div className="result-icon">✅</div>
+                <div className="result-title">测试通过！</div>
+                <div className="result-text">
+                  恭喜你成功完成了专家系统关卡！<br/>
+                  正确率达到85%以上，数据清洗效果优秀！
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="result-icon">❌</div>
+                <div className="result-title">测试未通过</div>
+                <div className="result-text">
+                  正确率未达到85%，请检查连接和参数设置。<br/>
+                  提示：确保专家系统正确连接，并调整隐藏参数。
+                </div>
+              </>
+            )}
+            <button className="info-close" onClick={() => setTestResult(null)}>
+              {testResult === 'pass' ? '太棒了！' : '再试一次'}
+            </button>
+          </div>
         </div>
       )}
 
