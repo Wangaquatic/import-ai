@@ -15,12 +15,14 @@ type Page = 'home' | 'levels' | 'shop' | 'profile' | 'tutorial' | 'level1' | 'le
 
 function AppContent(): React.JSX.Element {
   const [currentPage, setCurrentPage] = useState<Page>('home')
+  const [previousPage, setPreviousPage] = useState<Page>('home') // 追踪前一个页面
   const { isAuthenticated, isLoading, user } = useAuth()
 
   // 调试：监控认证状态变化
   console.log('🔍 App 状态:', { isAuthenticated, isLoading, user })
 
   const navigateTo = (page: Page) => {
+    setPreviousPage(currentPage)
     setCurrentPage(page)
   }
 
@@ -66,7 +68,7 @@ function AppContent(): React.JSX.Element {
         {currentPage === 'level2' && <Level2Page onBack={() => navigateTo('levels')} onNextLevel={() => navigateTo('level3')} onPrevLevel={() => navigateTo('level1')} onShop={() => navigateTo('shop')} />}
         {currentPage === 'level3' && <Level3Page onBack={() => navigateTo('levels')} onNextLevel={() => navigateTo('level4')} onPrevLevel={() => navigateTo('level2')} onShop={() => navigateTo('shop')} />}
         {currentPage === 'level4' && <Level4Page onBack={() => navigateTo('levels')} onNextLevel={() => navigateTo('levels')} onPrevLevel={() => navigateTo('level3')} onShop={() => navigateTo('shop')} />}
-        {currentPage === 'shop' && <ShopPage onBack={goHome} />}
+        {currentPage === 'shop' && <ShopPage onBack={() => navigateTo(previousPage)} fromLevel={(['level1', 'level2', 'level3', 'level4'].includes(previousPage) ? previousPage : null) as 'level1' | 'level2' | 'level3' | 'level4' | null} />}
         {currentPage === 'profile' && <ProfilePage onBack={goHome} />}
       </div>
       

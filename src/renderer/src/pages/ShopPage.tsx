@@ -4,9 +4,10 @@ import './ShopPage.css'
 
 interface ShopPageProps {
   onBack: () => void
+  fromLevel?: 'level1' | 'level2' | 'level3' | 'level4' | null
 }
 
-const ShopPage: React.FC<ShopPageProps> = ({ onBack }) => {
+const ShopPage: React.FC<ShopPageProps> = ({ onBack, fromLevel = null }) => {
   const { user } = useAuth()
   const [coins, setCoins] = useState(() => parseInt(localStorage.getItem('player_coins') || '0'))
   const [showSuccessModal, setShowSuccessModal] = useState(false)
@@ -100,7 +101,7 @@ const ShopPage: React.FC<ShopPageProps> = ({ onBack }) => {
     <div className="shop-page">
       <div className="page-header">
         <button className="back-button" onClick={onBack}>
-          ← 返回
+          ← {fromLevel && ['level1', 'level2', 'level3', 'level4'].includes(fromLevel) ? '返回关卡' : '返回'}
         </button>
         <h1 className="page-title">🏪 商店</h1>
       </div>

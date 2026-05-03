@@ -343,39 +343,74 @@ const Level2CopyPage: React.FC<Level2CopyPageProps> = ({ onBack, onNextLevel, on
     let id = 0
     const particles: Particle[] = []
 
-    // 左边：红蓝各20随机混合
+    // 输入：红蓝各20随机混合
+    const inputColors = [...Array(20).fill('#ef4444'), ...Array(20).fill('#3b82f6')].sort(() => Math.random() - 0.5)
     if (inputConn) {
-      const inputColors = [...Array(20).fill('#ef4444'), ...Array(20).fill('#3b82f6')].sort(() => Math.random() - 0.5)
       inputColors.forEach((color, i) => {
-        particles.push({ id: id++, color, from: inputConn.from, to: inputConn.to, progress: -(i * 0.1), speed: 0.003, done: false })
+        // 间隔 0.07，让输入粒子结束时间适中
+        particles.push({ id: id++, color, from: inputConn.from, to: inputConn.to, progress: -(i * 0.07), speed: 0.003, done: false })
       })
     }
 
-    const rightDelay = -0.5
-    // out1 连线：正确时使用计算的比例，错误时反转
+    // 输出延迟：输出应该在输入到达分类器后才开始
+    // 第一个输入粒子从 progress=0 开始，到达分类器需要 1/0.003 ≈ 333 帧
+    // 为了让输出在输入到达后才开始，输出第一个粒子应该从 progress=-1.5 开始
+    // 这样输出粒子需要 1.5/0.003 = 500 帧才开始显示，此时输入已经到达
+    const outputDelay = -1.5
+    
+    // out1 连线：输出红色粒子（根据准确率）
     if (out1Conn) {
       const correctCount = out1IsCorrect ? out1Correct : out1Wrong
       const wrongCount = out1IsCorrect ? out1Wrong : out1Correct
       const mainColor = out1IsCorrect ? '#ef4444' : '#3b82f6'
       const wrongColor = out1IsCorrect ? '#3b82f6' : '#ef4444'
+      
+      // 创建输出颜色数组（保持与输入相同的总数20）
       const out1Colors = [...Array(correctCount).fill(mainColor), ...Array(wrongCount).fill(wrongColor)].sort(() => Math.random() - 0.5)
       out1Colors.forEach((color, i) => {
-        particles.push({ id: id++, color, from: out1Conn.from, to: out1Conn.to, progress: rightDelay - i * 0.15, speed: 0.003, done: false })
+        particles.push({ 
+          id: id++, 
+          color, 
+          from: out1Conn.from, 
+          to: out1Conn.to, 
+          progress: outputDelay - (i * 0.1), 
+          speed: 0.003, 
+          done: false 
+        })
       })
     }
-    // out2 连线：正确时使用计算的比例，错误时反转
+    
+    // out2 连线：输出蓝色粒子（根据准确率）
     if (out2Conn) {
       const correctCount = out2IsCorrect ? out2Correct : out2Wrong
       const wrongCount = out2IsCorrect ? out2Wrong : out2Correct
       const mainColor = out2IsCorrect ? '#3b82f6' : '#ef4444'
       const wrongColor = out2IsCorrect ? '#ef4444' : '#3b82f6'
+      
+      // 创建输出颜色数组（保持与输入相同的总数20）
       const out2Colors = [...Array(correctCount).fill(mainColor), ...Array(wrongCount).fill(wrongColor)].sort(() => Math.random() - 0.5)
       out2Colors.forEach((color, i) => {
-        particles.push({ id: id++, color, from: out2Conn.from, to: out2Conn.to, progress: rightDelay - i * 0.15, speed: 0.003, done: false })
+        particles.push({ 
+          id: id++, 
+          color, 
+          from: out2Conn.from, 
+          to: out2Conn.to, 
+          progress: outputDelay - (i * 0.1), 
+          speed: 0.003, 
+          done: false 
+        })
       })
     }
 
     setTestParticles(particles)
+    
+    console.log('第一关测试开始:', {
+      总粒子数: particles.length,
+      输入粒子: particles.filter(p => p.from === 'input-out').length,
+      out1粒子: particles.filter(p => p.from === 'classifier-out1').length,
+      out2粒子: particles.filter(p => p.from === 'classifier-out2').length,
+      输出延迟: outputDelay
+    })
 
     const animate = () => {
       setTestParticles(prev => {
@@ -384,29 +419,38 @@ const Level2CopyPage: React.FC<Level2CopyPageProps> = ({ onBack, onNextLevel, on
           return { ...p, progress: newProgress, done: newProgress >= 1 }
         })
 
-        // 柱状图：用已出发方块数/总数，每出发一个方块涨一格，完全匀速
-        const rightAll = next.filter(p => p.from === 'classifier-out1' || p.from === 'classifier-out2')
-        const rightTotal = rightAll.length || 1
-        const rightStarted = rightAll.filter(p => p.progress > 0).length
-        const ratio = rightStarted / rightTotal
+        // 准确率显示：只统计已到达接收端的粒子
+        // target-in 接收的粒子
+        const targetParticles = next.filter(p => p.to === 'target-in')
+        const targetArrived = targetParticles.filter(p => p.done)
+        if (targetArrived.length > 0) {
+          const targetRed = targetArrived.filter(p => p.color === '#ef4444').length
+          const targetAccuracy = targetRed / targetArrived.length
+          setTargetProgress(targetAccuracy)
+        } else {
+          setTargetProgress(0) // 还没有粒子到达，显示0
+        }
 
-        setTargetProgress(Math.min(ratio * (out1IsCorrect ? baseCorrectRatio : baseWrongRatio), out1IsCorrect ? baseCorrectRatio : baseWrongRatio))
-        setNoTargetProgress(Math.min(ratio * (out2IsCorrect ? baseCorrectRatio : baseWrongRatio), out2IsCorrect ? baseCorrectRatio : baseWrongRatio))
+        // no-target-in 接收的粒子
+        const noTargetParticles = next.filter(p => p.to === 'no-target-in')
+        const noTargetArrived = noTargetParticles.filter(p => p.done)
+        if (noTargetArrived.length > 0) {
+          const noTargetBlue = noTargetArrived.filter(p => p.color === '#3b82f6').length
+          const noTargetAccuracy = noTargetBlue / noTargetArrived.length
+          setNoTargetProgress(noTargetAccuracy)
+        } else {
+          setNoTargetProgress(0) // 还没有粒子到达，显示0
+        }
 
-        // 右边两条线都完成后，左边停止
-        const rightParticles = next.filter(p => p.from === 'classifier-out1' || p.from === 'classifier-out2')
-        const rightDone = rightParticles.length > 0 && rightParticles.every(p => p.done)
-        const final = next.map(p =>
-          rightDone && p.from === 'input-out' ? { ...p, done: true } : p
-        )
-
-        if (final.every(p => p.done)) {
+        // 检查是否所有粒子都完成了（自然到达终点）
+        if (next.every(p => p.done)) {
           setTesting(false)
           const isPass = out1IsCorrect && out2IsCorrect && baseCorrectRatio >= 0.75
           const finalAccuracy = Math.max(
             out1IsCorrect ? baseCorrectRatio : baseWrongRatio,
             out2IsCorrect ? baseCorrectRatio : baseWrongRatio
           )
+          // 最终准确率设置
           setTargetProgress(out1IsCorrect ? baseCorrectRatio : baseWrongRatio)
           setNoTargetProgress(out2IsCorrect ? baseCorrectRatio : baseWrongRatio)
           if (timerRef.current) clearInterval(timerRef.current)
@@ -462,7 +506,7 @@ const Level2CopyPage: React.FC<Level2CopyPageProps> = ({ onBack, onNextLevel, on
           return []
         }
         animFrameRef.current = requestAnimationFrame(animate)
-        return final
+        return next
       })
     }
     animFrameRef.current = requestAnimationFrame(animate)
