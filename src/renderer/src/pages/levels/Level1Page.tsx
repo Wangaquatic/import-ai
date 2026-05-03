@@ -99,6 +99,8 @@ const Level2CopyPage: React.FC<Level2CopyPageProps> = ({ onBack, onNextLevel, on
   const everPassed = React.useRef(!!localStorage.getItem(TUTORIAL_PASSED_KEY))
   const [infoModal, setInfoModal] = useState<'input' | 'classifier' | null>(null)
   const [showHiddenLevel, setShowHiddenLevel] = useState(false)
+  const [showTutorial, setShowTutorial] = useState(true)
+  const [tutorialStep, setTutorialStep] = useState(0)
   const [draggingFromLibrary, setDraggingFromLibrary] = useState<DraggingNodeState | null>(null)
   const [draggingPlacedNode, setDraggingPlacedNode] = useState<{ nodeId: string; offsetX: number; offsetY: number } | null>(null)
   const [showResetNotice, setShowResetNotice] = useState(false)
@@ -144,6 +146,8 @@ const Level2CopyPage: React.FC<Level2CopyPageProps> = ({ onBack, onNextLevel, on
   const speedMultiplierRef = useRef(1.0)
   const animFrameRef = useRef<number | null>(null)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const displayedTargetRef = useRef(0)
+  const displayedNoTargetRef = useRef(0)
   const [, forceUpdate] = useState(0)
   const pageRef = useRef<HTMLDivElement>(null)
   const sidebarRef = useRef<HTMLDivElement>(null)
@@ -153,6 +157,23 @@ const Level2CopyPage: React.FC<Level2CopyPageProps> = ({ onBack, onNextLevel, on
     const timer = setTimeout(() => forceUpdate(n => n + 1), 100)
     return () => clearTimeout(timer)
   }, [])
+
+  // Tutorial animation sequence
+  useEffect(() => {
+    if (!showTutorial) return
+
+    const timers: ReturnType<typeof setTimeout>[] = []
+    timers.push(setTimeout(() => setTutorialStep(1), 400))
+    timers.push(setTimeout(() => setTutorialStep(2), 2200))
+    timers.push(setTimeout(() => setTutorialStep(3), 4300))
+    timers.push(setTimeout(() => setTutorialStep(4), 6200))
+
+    return () => timers.forEach(t => clearTimeout(t))
+  }, [showTutorial])
+
+  const handleCloseTutorial = () => {
+    setShowTutorial(false)
+  }
 
   const dotRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
@@ -312,6 +333,8 @@ const Level2CopyPage: React.FC<Level2CopyPageProps> = ({ onBack, onNextLevel, on
     setTesting(true)
     setTargetProgress(0)
     setNoTargetProgress(0)
+    displayedTargetRef.current = 0
+    displayedNoTargetRef.current = 0
     setElapsed(0)
 
     // 启动计时器
@@ -422,22 +445,34 @@ const Level2CopyPage: React.FC<Level2CopyPageProps> = ({ onBack, onNextLevel, on
         // 准确率显示：只统计已到达接收端的粒子
         // target-in 接收的粒子
         const targetParticles = next.filter(p => p.to === 'target-in')
+        const targetStarted = targetParticles.filter(p => p.progress >= 0).length
         const targetArrived = targetParticles.filter(p => p.done)
-        if (targetArrived.length > 0) {
+        if (targetParticles.length > 0 && targetStarted > 0) {
+          const finalTargetAccuracy = out1IsCorrect ? baseCorrectRatio : baseWrongRatio
+          const targetFlowProgress = targetStarted / targetParticles.length
           const targetRed = targetArrived.filter(p => p.color === '#ef4444').length
-          const targetAccuracy = targetRed / targetArrived.length
-          setTargetProgress(targetAccuracy)
+          const observedAccuracy = targetArrived.length > 0 ? (targetRed / targetArrived.length) : finalTargetAccuracy
+          const blendedAccuracy = observedAccuracy * 0.4 + finalTargetAccuracy * 0.6
+          const weightedAccuracy = blendedAccuracy * Math.pow(targetFlowProgress, 0.85)
+          displayedTargetRef.current += (weightedAccuracy - displayedTargetRef.current) * 0.12
+          setTargetProgress(displayedTargetRef.current)
         } else {
           setTargetProgress(0) // 还没有粒子到达，显示0
         }
 
         // no-target-in 接收的粒子
         const noTargetParticles = next.filter(p => p.to === 'no-target-in')
+        const noTargetStarted = noTargetParticles.filter(p => p.progress >= 0).length
         const noTargetArrived = noTargetParticles.filter(p => p.done)
-        if (noTargetArrived.length > 0) {
+        if (noTargetParticles.length > 0 && noTargetStarted > 0) {
+          const finalNoTargetAccuracy = out2IsCorrect ? baseCorrectRatio : baseWrongRatio
+          const noTargetFlowProgress = noTargetStarted / noTargetParticles.length
           const noTargetBlue = noTargetArrived.filter(p => p.color === '#3b82f6').length
-          const noTargetAccuracy = noTargetBlue / noTargetArrived.length
-          setNoTargetProgress(noTargetAccuracy)
+          const observedAccuracy = noTargetArrived.length > 0 ? (noTargetBlue / noTargetArrived.length) : finalNoTargetAccuracy
+          const blendedAccuracy = observedAccuracy * 0.4 + finalNoTargetAccuracy * 0.6
+          const weightedAccuracy = blendedAccuracy * Math.pow(noTargetFlowProgress, 0.85)
+          displayedNoTargetRef.current += (weightedAccuracy - displayedNoTargetRef.current) * 0.12
+          setNoTargetProgress(displayedNoTargetRef.current)
         } else {
           setNoTargetProgress(0) // 还没有粒子到达，显示0
         }
@@ -898,6 +933,57 @@ const Level2CopyPage: React.FC<Level2CopyPageProps> = ({ onBack, onNextLevel, on
           isConnectionCorrect={isConnectionCorrect}
           onCoinsUpdate={handleCoinsUpdate}
         />
+      )}
+
+      {/* 教学引导动画 */}
+      {showTutorial && (
+        <div className="level1-intro-overlay">
+          <div className="level1-intro-content">
+            {tutorialStep >= 1 && tutorialStep < 4 && (
+              <>
+                <div className="level1-intro-flow">
+                  <div className="level1-intro-line input" />
+                  <div className="level1-intro-line output-top" />
+                  <div className="level1-intro-line output-bottom" />
+                  <div className="level1-intro-classifier">
+                    <img src={classifierImg} alt="分类器" />
+                  </div>
+                  <div className="level1-intro-particle p1" />
+                  <div className="level1-intro-particle p2" />
+                  <div className="level1-intro-particle p3" />
+                </div>
+
+                {tutorialStep >= 2 && (
+                  <div className="level1-intro-hint">
+                    先拖出分类器，再把输入和两个输出连好
+                  </div>
+                )}
+
+                {tutorialStep >= 3 && (
+                  <div className="level1-intro-targets">
+                    <span>上路 {'->'} 有目标</span>
+                    <span>下路 {'->'} 无目标</span>
+                  </div>
+                )}
+              </>
+            )}
+
+            {tutorialStep >= 4 && (
+              <div className="level1-intro-solution">
+                <div className="level1-intro-solution-text">
+                  目标：正确率达到 <span className="level1-intro-highlight">75%</span> 即可过关
+                </div>
+                <button className="level1-intro-btn" onClick={handleCloseTutorial}>
+                  我明白了
+                </button>
+              </div>
+            )}
+          </div>
+
+          <button className="level1-intro-skip-btn" onClick={handleCloseTutorial}>
+            Skip
+          </button>
+        </div>
       )}
     </div>
   )

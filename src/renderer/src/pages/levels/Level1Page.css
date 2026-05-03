@@ -689,3 +689,218 @@
 .level1-tutorial-page .zoom-reset-btn:hover {
   background: rgba(96, 165, 250, 0.4);
 }
+
+/* Level1 intro tutorial overlay */
+.level1-intro-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  animation: level1IntroFadeIn 0.4s ease;
+}
+
+.level1-intro-content {
+  position: relative;
+  width: 640px;
+  height: 420px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.level1-intro-flow {
+  position: relative;
+  width: 520px;
+  height: 260px;
+}
+
+.level1-intro-line {
+  position: absolute;
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, rgba(96, 165, 250, 0.1), rgba(96, 165, 250, 0.9), rgba(96, 165, 250, 0.1));
+  box-shadow: 0 0 16px rgba(96, 165, 250, 0.6);
+}
+
+.level1-intro-line.input {
+  left: 20px;
+  top: 130px;
+  width: 210px;
+}
+
+.level1-intro-line.output-top {
+  left: 300px;
+  top: 95px;
+  width: 180px;
+  transform: rotate(-18deg);
+  transform-origin: left center;
+}
+
+.level1-intro-line.output-bottom {
+  left: 300px;
+  top: 165px;
+  width: 180px;
+  transform: rotate(18deg);
+  transform-origin: left center;
+}
+
+.level1-intro-classifier {
+  position: absolute;
+  left: 220px;
+  top: 85px;
+  width: 110px;
+  height: 110px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 2px solid rgba(96, 165, 250, 0.8);
+  box-shadow: 0 0 24px rgba(96, 165, 250, 0.45);
+}
+
+.level1-intro-classifier img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.level1-intro-particle {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: #ef4444;
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.9);
+  animation: level1IntroParticle 2s linear infinite;
+}
+
+.level1-intro-particle.p1 { animation-delay: 0s; }
+.level1-intro-particle.p2 { animation-delay: 0.5s; }
+.level1-intro-particle.p3 { animation-delay: 1s; }
+
+.level1-intro-hint {
+  position: absolute;
+  bottom: 52px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #ffffff;
+  font-size: 24px;
+  font-weight: 600;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.55);
+  animation: level1IntroUp 0.4s ease;
+  text-align: center;
+}
+
+.level1-intro-targets {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 24px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #dbeafe;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
+  animation: level1IntroUp 0.4s ease;
+}
+
+.level1-intro-solution {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.level1-intro-solution-text {
+  color: #ffffff;
+  font-size: 28px;
+  font-weight: 700;
+  text-align: center;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.65);
+}
+
+.level1-intro-highlight {
+  color: #34d399;
+}
+
+.level1-intro-btn {
+  padding: 12px 34px;
+  border: 2px solid rgba(52, 211, 153, 0.85);
+  border-radius: 10px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #ffffff;
+  background: rgba(52, 211, 153, 0.25);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.level1-intro-btn:hover {
+  background: rgba(52, 211, 153, 0.45);
+  transform: translateY(-2px);
+}
+
+.level1-intro-skip-btn {
+  position: fixed;
+  right: 28px;
+  bottom: 28px;
+  padding: 10px 22px;
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.95);
+  cursor: pointer;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  transition: all 0.2s ease;
+  z-index: 2100;
+}
+
+.level1-intro-skip-btn:hover {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: #ffffff;
+}
+
+@keyframes level1IntroFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes level1IntroUp {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@keyframes level1IntroParticle {
+  0% {
+    left: 30px;
+    top: 125px;
+    opacity: 0;
+  }
+  8% { opacity: 1; }
+  45% {
+    left: 260px;
+    top: 125px;
+    opacity: 1;
+  }
+  72% {
+    left: 390px;
+    top: 88px;
+    opacity: 1;
+  }
+  100% {
+    left: 485px;
+    top: 70px;
+    opacity: 0;
+  }
+}
