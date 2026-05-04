@@ -33,8 +33,8 @@ interface Particle {
 const Level4HiddenModal: React.FC<Level4HiddenModalProps> = ({ onClose }) => {
   const [placedBlocks, setPlacedBlocks] = useState<LogicBlock[]>([
     { id: 'start', type: 'start', x: 150, y: 50, connections: {} },
-    { id: 'end1', type: 'end', x: 400, y: 300, connections: {} },
-    { id: 'end2', type: 'end', x: 400, y: 450, connections: {} }
+    { id: 'end1', type: 'end', x: 700, y: 200, connections: {} },
+    { id: 'end2', type: 'end', x: 700, y: 350, connections: {} }
   ])
   const [draggingBlock, setDraggingBlock] = useState<{ type: BlockType; conditionType?: ConditionType; actionType?: ActionType; mouseX: number; mouseY: number } | null>(null)
   const [draggingPlacedBlock, setDraggingPlacedBlock] = useState<{ blockId: string; offsetX: number; offsetY: number } | null>(null)
@@ -346,8 +346,8 @@ const Level4HiddenModal: React.FC<Level4HiddenModalProps> = ({ onClose }) => {
   const handleReset = () => {
     setPlacedBlocks([
       { id: 'start', type: 'start', x: 150, y: 50, connections: {} },
-      { id: 'end1', type: 'end', x: 400, y: 300, connections: {} },
-      { id: 'end2', type: 'end', x: 400, y: 450, connections: {} }
+      { id: 'end1', type: 'end', x: 700, y: 200, connections: {} },
+      { id: 'end2', type: 'end', x: 700, y: 350, connections: {} }
     ])
     setStats({ output1: 0, output2: 0, correct: 0, total: 0 })
     setShowResult(false)
