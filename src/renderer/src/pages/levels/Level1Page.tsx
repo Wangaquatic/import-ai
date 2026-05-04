@@ -35,11 +35,47 @@ interface DraggingNodeState {
   mouseY: number
 }
 
+type ModuleKey =
+  | 'input'
+  | 'classifier'
+  | 'target'
+  | 'noTarget'
+  | 'zoom'
+  | 'nodeLibrary'
+  | 'save'
+  | 'reset'
+  | 'speed'
+  | 'clear'
+  | 'hidden'
+  | 'test'
+  | 'back'
+  | 'next'
+  | 'shop'
+
 const SAVE_KEY = 'level2copy_tutorial_saved_state'
 const COINS_KEY = 'player_coins'
 const TUTORIAL_REWARD_KEY = 'level2copy_tutorial_reward_claimed'
 const TUTORIAL_PASSED_KEY = 'level2copy_tutorial_passed'
 const HIDDEN_PARAMS_KEY = 'level2copy_tutorial_hidden_params'
+const LEVEL1_LEARNED_ALL_KEY = 'level1_learned_all_modules'
+
+const MODULE_INTROS: Record<ModuleKey, { title: string; desc: string }> = {
+  input: { title: '输入数据', desc: '这里是训练样本入口。把输入连接到分类器，模型才能开始判断。' },
+  classifier: { title: '分类器', desc: '分类器负责把输入分成两路结果。你需要放置并连接它。' },
+  target: { title: '有目标结果', desc: '上方结果区用于接收“有目标”输出，红色比例越高越好。' },
+  noTarget: { title: '无目标结果', desc: '下方结果区用于接收“无目标”输出，蓝色比例越高越好。' },
+  zoom: { title: '缩放控制', desc: '按住 Ctrl 并滚动鼠标滚轮可放大/缩小画面，方便调整分类器与连线细节；缩放后可点击“重置”恢复 100%。' },
+  nodeLibrary: { title: '节点库', desc: '从这里拖拽分类器到画布。第一关最多放置 1 个分类器。' },
+  save: { title: '保存', desc: '保存当前连线和节点位置，下次进入会恢复。' },
+  reset: { title: '重置', desc: '将本关状态恢复初始，连线与节点会清空。' },
+  speed: { title: '速度', desc: '切换测试动画速度，便于观察粒子流向。' },
+  clear: { title: '清空', desc: '快速清除当前所有节点和连线。' },
+  hidden: { title: '隐藏关卡', desc: '进入参数调优挑战，调参会影响本关基础准确率。' },
+  test: { title: '测试/训练', desc: '开始测试模型连接是否正确，并显示准确率变化。' },
+  back: { title: '返回', desc: '返回关卡选择页面。' },
+  next: { title: '下一关', desc: '完成本关并让正确率达到 75% 后，可进入下一关继续学习。' },
+  shop: { title: '商店', desc: '进入商店查看可用道具或内容。' }
+}
 
 const Level2CopyPage: React.FC<Level2CopyPageProps> = ({ onBack, onNextLevel, onShop }) => {
   const particles = React.useMemo(() => {
@@ -101,6 +137,9 @@ const Level2CopyPage: React.FC<Level2CopyPageProps> = ({ onBack, onNextLevel, on
   const [showHiddenLevel, setShowHiddenLevel] = useState(false)
   const [showTutorial, setShowTutorial] = useState(true)
   const [tutorialStep, setTutorialStep] = useState(0)
+  const [showLearnNotice, setShowLearnNotice] = useState(() => !localStorage.getItem(LEVEL1_LEARNED_ALL_KEY))
+  const [moduleIntro, setModuleIntro] = useState<ModuleKey | null>(null)
+  const [seenModules, setSeenModules] = useState<ModuleKey[]>([])
   const [draggingFromLibrary, setDraggingFromLibrary] = useState<DraggingNodeState | null>(null)
   const [draggingPlacedNode, setDraggingPlacedNode] = useState<{ nodeId: string; offsetX: number; offsetY: number } | null>(null)
   const [showResetNotice, setShowResetNotice] = useState(false)
@@ -173,6 +212,50 @@ const Level2CopyPage: React.FC<Level2CopyPageProps> = ({ onBack, onNextLevel, on
 
   const handleCloseTutorial = () => {
     setShowTutorial(false)
+  }
+
+  const requiredModules = React.useMemo(
+    () => (onShop
+      ? (['input', 'classifier', 'target', 'noTarget', 'zoom', 'nodeLibrary', 'save', 'reset', 'speed', 'clear', 'hidden', 'test', 'back', 'next', 'shop'] as ModuleKey[])
+      : (['input', 'classifier', 'target', 'noTarget', 'zoom', 'nodeLibrary', 'save', 'reset', 'speed', 'clear', 'hidden', 'test', 'back', 'next'] as ModuleKey[])),
+    [onShop]
+  )
+
+  const canStartTraining = requiredModules.every(m => seenModules.includes(m))
+  const remainingIntroCount = requiredModules.filter(m => !seenModules.includes(m)).length
+  const learnedCount = requiredModules.filter(m => seenModules.includes(m)).length
+  const isModulePending = (module: ModuleKey) => !seenModules.includes(module)
+
+  // 每次进入第一关都重置学习进度（仅保留“首次提示已看过”）
+  useEffect(() => {
+    setSeenModules([])
+    setModuleIntro(null)
+  }, [])
+
+  // 使用 Ctrl+滚轮发生缩放时，自动记为“缩放模块已学习”
+  useEffect(() => {
+    if (zoom !== 1 && !seenModules.includes('zoom')) {
+      setSeenModules(prev => (prev.includes('zoom') ? prev : [...prev, 'zoom']))
+    }
+  }, [zoom, seenModules])
+
+  useEffect(() => {
+    if (canStartTraining) {
+      setSeenModules(prev => (prev.length === requiredModules.length ? prev : [...requiredModules]))
+      setModuleIntro(null)
+      localStorage.setItem(LEVEL1_LEARNED_ALL_KEY, '1')
+      setShowLearnNotice(false)
+    }
+  }, [canStartTraining, requiredModules])
+
+  const openModuleIntro = (module: ModuleKey, nextAction?: () => void) => {
+    const isSeen = seenModules.includes(module)
+    if (isSeen) {
+      nextAction?.()
+      return
+    }
+    setSeenModules(prev => (prev.includes(module) ? prev : [...prev, module]))
+    setModuleIntro(module)
   }
 
   const dotRefs = useRef<Record<string, HTMLDivElement | null>>({})
@@ -272,6 +355,13 @@ const Level2CopyPage: React.FC<Level2CopyPageProps> = ({ onBack, onNextLevel, on
   }, [draggingFromLibrary, draggingPlacedNode, placedNodes])
 
   const handleLibraryNodeDragStart = (e: React.MouseEvent) => {
+    if (!seenModules.includes('classifier')) {
+      openModuleIntro('classifier')
+    }
+    if (!seenModules.includes('nodeLibrary')) {
+      openModuleIntro('nodeLibrary')
+      return
+    }
     const existingNode = placedNodes.find(n => n.type === 'classifier')
     if (existingNode) return // 已经放置过，不能再拖
     
@@ -330,6 +420,10 @@ const Level2CopyPage: React.FC<Level2CopyPageProps> = ({ onBack, onNextLevel, on
   // 启动测试
   const handleTest = () => {
     if (testing) return
+    if (!canStartTraining) {
+      openModuleIntro('test')
+      return
+    }
     setTesting(true)
     setTargetProgress(0)
     setNoTargetProgress(0)
@@ -668,10 +762,10 @@ const Level2CopyPage: React.FC<Level2CopyPageProps> = ({ onBack, onNextLevel, on
         ))}
       </div>
 
-      <button className="back-button" onClick={onBack}>← 返回</button>
+      <button className={`back-button ${isModulePending('back') ? 'module-halo' : ''}`} onClick={() => openModuleIntro('back', onBack)}>← 返回</button>
 
       {/* 隐藏关卡按钮 - 左下角 */}
-      <button className="hidden-level-btn" onClick={() => setShowHiddenLevel(true)} title="隐藏关卡">
+      <button className={`hidden-level-btn ${isModulePending('hidden') ? 'module-halo' : ''}`} onClick={() => openModuleIntro('hidden', () => setShowHiddenLevel(true))} title="隐藏关卡">
         🎛️
       </button>
 
@@ -680,13 +774,23 @@ const Level2CopyPage: React.FC<Level2CopyPageProps> = ({ onBack, onNextLevel, on
 
       {/* 商店按钮 */}
       {onShop && (
-        <button className="shop-button" onClick={onShop} title="商店">
+        <button className={`shop-button ${isModulePending('shop') ? 'module-halo' : ''}`} onClick={() => openModuleIntro('shop', onShop)} title="商店">
           🛒
         </button>
       )}
 
+      {!canStartTraining && (
+        <div className={`module-progress-indicator ${onShop ? 'near-shop' : ''}`}>
+          已学习 {learnedCount}/{requiredModules.length}
+        </div>
+      )}
+
       {/* 缩放指示器 */}
-      <div className="zoom-indicator">
+      <div
+        className={`zoom-indicator ${isModulePending('zoom') ? 'module-halo' : ''}`}
+        onClick={() => openModuleIntro('zoom')}
+        title="缩放说明"
+      >
         <span>🔍 {Math.round(zoom * 100)}%</span>
         {zoom !== 1.0 && (
           <button className="zoom-reset-btn" onClick={resetZoom}>
@@ -717,19 +821,21 @@ const Level2CopyPage: React.FC<Level2CopyPageProps> = ({ onBack, onNextLevel, on
 
       {/* 清除按钮 - 统一样式，右下角 */}
       <button 
-        className="clear-all-btn" 
-        onClick={handleClearAll}
+        className={`clear-all-btn ${isModulePending('clear') ? 'module-halo' : ''}`} 
+        onClick={() => openModuleIntro('clear', handleClearAll)}
         disabled={testing}
+        
         title="清除所有节点和连接"
+        
       >
         🗑️
       </button>
 
       {/* 下一关按钮 */}
-      <button className="next-level-btn" onClick={onNextLevel}>下一关</button>
+      <button className={`next-level-btn ${isModulePending('next') ? 'module-halo' : ''}`} onClick={() => openModuleIntro('next', onNextLevel)}>下一关</button>
 
       {/* 速度控制 */}
-      <button className="speed-btn" onClick={handleSpeedChange}>
+      <button className={`speed-btn ${isModulePending('speed') ? 'module-halo' : ''}`} onClick={() => openModuleIntro('speed', handleSpeedChange)}>
         ▶▶ {speedMultiplier.toFixed(1)}x
       </button>
 
@@ -745,7 +851,7 @@ const Level2CopyPage: React.FC<Level2CopyPageProps> = ({ onBack, onNextLevel, on
         <div className="img-with-dot">
           <div style={{ position: 'relative', display: 'inline-block', transform: `scale(${zoom})`, transformOrigin: 'center center' }}>
             <img src={tutorialInput} alt="教学关卡输入" className="input-img" draggable={false} />
-            <button className="info-btn" onClick={() => setInfoModal('input')}>i</button>
+            <button className={`info-btn ${isModulePending('input') ? 'module-halo' : ''}`} onClick={() => { openModuleIntro('input'); setInfoModal('input') }}>i</button>
             <div ref={setDotRef('input-out')} className="dot dot-right"
               onMouseDown={(e) => onDotMouseDown(e, 'input-out')}
               onMouseUp={(e) => onDotMouseUp(e, 'input-out')} />
@@ -760,7 +866,7 @@ const Level2CopyPage: React.FC<Level2CopyPageProps> = ({ onBack, onNextLevel, on
             <div ref={setDotRef('target-in')} className="dot dot-left"
               onMouseDown={(e) => onDotMouseDown(e, 'target-in')}
               onMouseUp={(e) => onDotMouseUp(e, 'target-in')} />
-            <img src={targetImg} alt="有目标" className="target-img" draggable={false} />
+            <img src={targetImg} alt="有目标" className={`target-img ${isModulePending('target') ? 'module-halo' : ''}`} draggable={false} onClick={() => openModuleIntro('target')} />
             {(testing || targetProgress > 0) && (
               <div className="bar-overlay">
                 <span className="bar-label">{Math.round(targetProgress * 100)}%</span>
@@ -777,7 +883,7 @@ const Level2CopyPage: React.FC<Level2CopyPageProps> = ({ onBack, onNextLevel, on
             <div ref={setDotRef('no-target-in')} className="dot dot-left"
               onMouseDown={(e) => onDotMouseDown(e, 'no-target-in')}
               onMouseUp={(e) => onDotMouseUp(e, 'no-target-in')} />
-            <img src={noTargetImg} alt="无目标" className="target-img" draggable={false} />
+            <img src={noTargetImg} alt="无目标" className={`target-img ${isModulePending('noTarget') ? 'module-halo' : ''}`} draggable={false} onClick={() => openModuleIntro('noTarget')} />
             {(testing || noTargetProgress > 0) && (
               <div className="bar-overlay">
                 <span className="bar-label">{Math.round(noTargetProgress * 100)}%</span>
@@ -794,20 +900,34 @@ const Level2CopyPage: React.FC<Level2CopyPageProps> = ({ onBack, onNextLevel, on
       {/* 右边栏 */}
       <div ref={sidebarRef} className="sidebar">
         <div className="sidebar-actions">
-          <button className={`sidebar-btn test-btn ${testing ? 'testing' : ''}`} onClick={handleTest} disabled={testing}>
+          {!canStartTraining && (
+            <div style={{ fontSize: '12px', color: '#fbbf24', marginBottom: '6px', textAlign: 'center' }}>
+              先学习全部模块（剩余 {remainingIntroCount} 个）
+            </div>
+          )}
+          <button className={`sidebar-btn test-btn ${testing ? 'testing' : ''} ${isModulePending('test') ? 'module-halo' : ''}`} onClick={handleTest} disabled={testing} title={canStartTraining ? '开始测试' : `还需学习 ${remainingIntroCount} 个模块`}>
             {testing ? '测试中...' : '测试'}
           </button>
-          <button className={`sidebar-btn save-btn ${saved ? 'saved' : ''}`} onClick={handleSave}>
+          <button className={`sidebar-btn save-btn ${saved ? 'saved' : ''} ${isModulePending('save') ? 'module-halo' : ''}`} onClick={() => openModuleIntro('save', handleSave)}>
             {saved ? '已保存 ✓' : '保存'}
           </button>
-          <button className="sidebar-btn reset-btn" onClick={handleReset} title="重置关卡">
+          <button className={`sidebar-btn reset-btn ${isModulePending('reset') ? 'module-halo' : ''}`} onClick={() => openModuleIntro('reset', handleReset)} title="重置关卡">
             🔄
           </button>
         </div>
         <div className="sidebar-content">
           <div className="sidebar-title">节点库</div>
           <div 
-            className={`sidebar-node ${placedNodes.find(n => n.type === 'classifier') ? 'disabled' : ''}`}
+            className={`sidebar-node ${placedNodes.find(n => n.type === 'classifier') ? 'disabled' : ''} ${isModulePending('nodeLibrary') ? 'module-halo' : ''}`}
+            onClick={() => {
+              if (isModulePending('classifier')) {
+                openModuleIntro('classifier')
+                return
+              }
+              if (isModulePending('nodeLibrary')) {
+                openModuleIntro('nodeLibrary')
+              }
+            }}
             onMouseDown={handleLibraryNodeDragStart}
           >
             <img src={classifierImg} alt="分类器" className="sidebar-node-img" draggable={false} />
@@ -838,7 +958,7 @@ const Level2CopyPage: React.FC<Level2CopyPageProps> = ({ onBack, onNextLevel, on
             onMouseUp={(e) => onDotMouseUp(e, 'classifier-in')} />
           <div style={{ position: 'relative', width: '180px', flexShrink: 0 }}>
             <img src={classifierImg} alt="分类器" className="classifier-img" draggable={false} style={{ width: '100%', display: 'block' }} />
-            <button className="info-btn" onClick={(e) => { e.stopPropagation(); setInfoModal('classifier') }}>i</button>
+            <button className={`info-btn ${isModulePending('classifier') ? 'module-halo' : ''}`} onClick={(e) => { e.stopPropagation(); openModuleIntro('classifier'); setInfoModal('classifier') }}>i</button>
             <div ref={setDotRef('classifier-out1')} className="dot"
               style={{ position: 'absolute', right: 10, top: '35%', transform: 'translateY(-50%)' }}
               onMouseDown={(e) => onDotMouseDown(e, 'classifier-out1')}
@@ -892,6 +1012,21 @@ const Level2CopyPage: React.FC<Level2CopyPageProps> = ({ onBack, onNextLevel, on
         </div>
       )}
 
+      {showLearnNotice && (
+        <div className="info-overlay" onClick={() => setShowLearnNotice(false)}>
+          <div className="info-modal" onClick={e => e.stopPropagation()}>
+            <h3 className="info-title">📌 学习提示</h3>
+            <p className="info-desc">
+              本关需要先学习所有必学模块，才能开始测试训练模型。
+            </p>
+            <p className="info-desc" style={{ marginTop: '-8px' }}>
+              请优先点击带有<span style={{ color: '#38bdf8', fontWeight: 700 }}>蓝色光圈</span>的模块进行学习。
+            </p>
+            <button className="info-close" onClick={() => setShowLearnNotice(false)}>我知道了</button>
+          </div>
+        </div>
+      )}
+
       {/* 说明弹窗 */}
       {infoModal && (
         <div className="info-overlay" onClick={() => setInfoModal(null)}>
@@ -919,6 +1054,19 @@ const Level2CopyPage: React.FC<Level2CopyPageProps> = ({ onBack, onNextLevel, on
               </div>
             </div>
             <button className="info-close" onClick={() => setInfoModal(null)}>关闭</button>
+          </div>
+        </div>
+      )}
+
+      {moduleIntro && (
+        <div className="info-overlay" onClick={() => setModuleIntro(null)}>
+          <div className="info-modal" onClick={e => e.stopPropagation()}>
+            <h3 className="info-title">📘 {MODULE_INTROS[moduleIntro].title}</h3>
+            <p className="info-desc">{MODULE_INTROS[moduleIntro].desc}</p>
+            <p className="info-desc" style={{ marginTop: '-8px', color: '#94a3b8' }}>
+              已学习 {seenModules.length}/{requiredModules.length}
+            </p>
+            <button className="info-close" onClick={() => setModuleIntro(null)}>知道了</button>
           </div>
         </div>
       )}
