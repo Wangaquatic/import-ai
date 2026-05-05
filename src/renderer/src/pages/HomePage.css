@@ -352,6 +352,10 @@
   height: 60px;
 }
 
+.bottom-nav-container .game-button:active {
+  transform: scale(0.97);
+}
+
 /* 导航按钮区域 */
 .nav-container {
   position: fixed;

@@ -58,6 +58,7 @@ const TUTORIAL_REWARD_KEY = 'level2copy_tutorial_reward_claimed'
 const TUTORIAL_PASSED_KEY = 'level2copy_tutorial_passed'
 const HIDDEN_PARAMS_KEY = 'level2copy_tutorial_hidden_params'
 const LEVEL1_LEARNED_ALL_KEY = 'level1_learned_all_modules'
+const LEVEL1_SEEN_MODULES_KEY = 'level1_seen_modules'
 
 const MODULE_INTROS: Record<ModuleKey, { title: string; desc: string }> = {
   input: { title: '输入数据', desc: '这里是训练样本入口。把输入连接到分类器，模型才能开始判断。' },
@@ -135,14 +136,22 @@ const Level2CopyPage: React.FC<Level2CopyPageProps> = ({ onBack, onNextLevel, on
   const everPassed = React.useRef(!!localStorage.getItem(TUTORIAL_PASSED_KEY))
   const [infoModal, setInfoModal] = useState<'input' | 'classifier' | null>(null)
   const [showHiddenLevel, setShowHiddenLevel] = useState(false)
-  const [showTutorial, setShowTutorial] = useState(true)
+  const [showTutorial, setShowTutorial] = useState(true) // 每次进入都显示，仿照其他关卡
   const [tutorialStep, setTutorialStep] = useState(0)
   const [showLearnNotice, setShowLearnNotice] = useState(() => !localStorage.getItem(LEVEL1_LEARNED_ALL_KEY))
   const [moduleIntro, setModuleIntro] = useState<ModuleKey | null>(null)
-  const [seenModules, setSeenModules] = useState<ModuleKey[]>([])
+  const [seenModules, setSeenModules] = useState<ModuleKey[]>(() => {
+    try {
+      const saved = localStorage.getItem(LEVEL1_SEEN_MODULES_KEY);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  })
   const [draggingFromLibrary, setDraggingFromLibrary] = useState<DraggingNodeState | null>(null)
   const [draggingPlacedNode, setDraggingPlacedNode] = useState<{ nodeId: string; offsetX: number; offsetY: number } | null>(null)
   const [showResetNotice, setShowResetNotice] = useState(false)
+  const [showAllGuides, setShowAllGuides] = useState(false)
 
   // 金币更新回调
   const handleCoinsUpdate = (newCoins: number) => {
@@ -198,20 +207,22 @@ const Level2CopyPage: React.FC<Level2CopyPageProps> = ({ onBack, onNextLevel, on
   }, [])
 
   // Tutorial animation sequence
+  // 教程动画序列 - 仿照其他关卡模式，讲解分类器作用
   useEffect(() => {
     if (!showTutorial) return
 
     const timers: ReturnType<typeof setTimeout>[] = []
-    timers.push(setTimeout(() => setTutorialStep(1), 400))
-    timers.push(setTimeout(() => setTutorialStep(2), 2200))
-    timers.push(setTimeout(() => setTutorialStep(3), 4300))
-    timers.push(setTimeout(() => setTutorialStep(4), 6200))
+    timers.push(setTimeout(() => setTutorialStep(1), 500))   // 数据进入
+    timers.push(setTimeout(() => setTutorialStep(2), 2800))  // 分类器处理
+    timers.push(setTimeout(() => setTutorialStep(3), 4800))  // 分流展示
+    timers.push(setTimeout(() => setTutorialStep(4), 6800))  // 总结
 
     return () => timers.forEach(t => clearTimeout(t))
   }, [showTutorial])
 
   const handleCloseTutorial = () => {
-    setShowTutorial(false)
+    setShowTutorial(false);
+    setTutorialStep(0);
   }
 
   const requiredModules = React.useMemo(
@@ -226,13 +237,14 @@ const Level2CopyPage: React.FC<Level2CopyPageProps> = ({ onBack, onNextLevel, on
   const learnedCount = requiredModules.filter(m => seenModules.includes(m)).length
   const isModulePending = (module: ModuleKey) => !seenModules.includes(module)
 
-  // 每次进入第一关都重置学习进度（仅保留“首次提示已看过”）
+  // 每次 seenModules 变化时持久化到 localStorage
   useEffect(() => {
-    setSeenModules([])
-    setModuleIntro(null)
-  }, [])
+    if (seenModules.length > 0) {
+      localStorage.setItem(LEVEL1_SEEN_MODULES_KEY, JSON.stringify(seenModules));
+    }
+  }, [seenModules]);
 
-  // 使用 Ctrl+滚轮发生缩放时，自动记为“缩放模块已学习”
+  // 使用 Ctrl+滚轮发生缩放时，自动记为"缩放模块已学习"
   useEffect(() => {
     if (zoom !== 1 && !seenModules.includes('zoom')) {
       setSeenModules(prev => (prev.includes('zoom') ? prev : [...prev, 'zoom']))
@@ -1083,54 +1095,101 @@ const Level2CopyPage: React.FC<Level2CopyPageProps> = ({ onBack, onNextLevel, on
         />
       )}
 
-      {/* 教学引导动画 */}
+      {/* 教程动画 - 讲解分类器作用，仿照其他关卡风格 */}
       {showTutorial && (
-        <div className="level1-intro-overlay">
-          <div className="level1-intro-content">
+        <div className="level1-tutorial-overlay">
+          <div className="level1-tutorial-content">
+            {/* 步骤1-3：数据粒子流 + 分类器 + 分流展示 */}
             {tutorialStep >= 1 && tutorialStep < 4 && (
               <>
-                <div className="level1-intro-flow">
-                  <div className="level1-intro-line input" />
-                  <div className="level1-intro-line output-top" />
-                  <div className="level1-intro-line output-bottom" />
-                  <div className="level1-intro-classifier">
-                    <img src={classifierImg} alt="分类器" />
-                  </div>
-                  <div className="level1-intro-particle p1" />
-                  <div className="level1-intro-particle p2" />
-                  <div className="level1-intro-particle p3" />
+                {/* 分类器居中 */}
+                <div className="tut-classifier">
+                  <img src={classifierImg} alt="分类器" />
                 </div>
 
+                {/* 数据流粒子 */}
+                <div className="tut-particles">
+                  <div className="tut-p p1" />
+                  <div className="tut-p p2" />
+                  <div className="tut-p p3" />
+                </div>
+                <div className="tut-flow-line" />
+
+                {/* 步骤2：处理中文字 */}
                 {tutorialStep >= 2 && (
-                  <div className="level1-intro-hint">
-                    先拖出分类器，再把输入和两个输出连好
-                  </div>
+                  <>
+                    <div className="tut-line-top" />
+                    <div className="tut-line-bottom" />
+                    <div className="tut-process-text">
+                      分类器正在分析数据特征...
+                    </div>
+                  </>
                 )}
 
+                {/* 步骤3：分流展示 */}
                 {tutorialStep >= 3 && (
-                  <div className="level1-intro-targets">
-                    <span>上路 {'->'} 有目标</span>
-                    <span>下路 {'->'} 无目标</span>
+                  <div className="tut-split">
+                    <div className="tut-split-top">
+                      <span className="tut-arrow">↑</span>
+                      <span className="tut-label">有目标</span>
+                    </div>
+                    <div className="tut-split-bottom">
+                      <span className="tut-arrow">↓</span>
+                      <span className="tut-label">无目标</span>
+                    </div>
                   </div>
                 )}
               </>
             )}
 
+            {/* 步骤4：总结 */}
             {tutorialStep >= 4 && (
-              <div className="level1-intro-solution">
-                <div className="level1-intro-solution-text">
-                  目标：正确率达到 <span className="level1-intro-highlight">75%</span> 即可过关
+              <div className="tut-summary">
+                <div className="tut-summary-icon">
+                  <img src={classifierImg} alt="分类器" />
                 </div>
-                <button className="level1-intro-btn" onClick={handleCloseTutorial}>
+                <div className="tut-summary-title">
+                  <span className="tut-highlight">分类器</span> 是一个二分类模型
+                </div>
+                <div className="tut-summary-desc">
+                  它能根据输入数据的特征，智能地判定为<br/>
+                  「<span style={{color:'#34d399'}}>有目标</span>」或「<span style={{color:'#f87171'}}>无目标</span>」两类。
+                  <br/><br/>
+                  将分类器正确连接到输入和两个输出端，<br/>
+                  达到 <span className="tut-highlight">75%</span> 准确率即可过关！
+                </div>
+                <button className="tut-btn" onClick={handleCloseTutorial}>
                   我明白了
                 </button>
               </div>
             )}
           </div>
 
-          <button className="level1-intro-skip-btn" onClick={handleCloseTutorial}>
+          {/* Skip 按钮 - 与其他关卡一致 */}
+          <button className="tut-skip-btn" onClick={handleCloseTutorial}>
             Skip
           </button>
+        </div>
+      )}
+      {/* 查看全部引导按钮 */}
+      <button className="show-all-guides-btn" onClick={()=>setShowAllGuides(true)} title="查看所有模块引导">
+        📖 引导
+      </button>
+      {/* 全部引导弹窗 */}
+      {showAllGuides && (
+        <div className="info-overlay" onClick={()=>setShowAllGuides(false)}>
+          <div className="info-modal" style={{maxWidth:600}} onClick={e=>e.stopPropagation()}>
+            <h3 className="info-title">📚 全部模块引导</h3>
+            <div className="guide-scroll-content">
+              {requiredModules.map(m => (
+                <div key={m} style={{marginBottom:16}}>
+                  <div style={{fontWeight:700,marginBottom:4}}>{MODULE_INTROS[m].title}</div>
+                  <div style={{color:'#64748b'}}>{MODULE_INTROS[m].desc}</div>
+                </div>
+              ))}
+            </div>
+            <button className="info-close" onClick={()=>setShowAllGuides(false)}>关闭</button>
+          </div>
         </div>
       )}
     </div>

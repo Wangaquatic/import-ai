@@ -173,7 +173,6 @@
   transform: scale(1.05);
   box-shadow: 0 6px 16px rgba(52, 211, 153, 0.5);
 }
-}
 
 /* 速度按钮 */
 .speed-btn {
@@ -691,219 +690,232 @@
 }
 
 /* Level1 intro tutorial overlay */
-.level1-intro-overlay {
+/* Level1 教程动画 - 仿照其他关卡风格，讲解分类器作用 */
+.level1-tutorial-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.9);
+  background: rgba(0, 0, 0, 0.92);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 2000;
-  animation: level1IntroFadeIn 0.4s ease;
+  animation: tutFadeIn 0.35s ease;
 }
 
-.level1-intro-content {
+.level1-tutorial-content {
   position: relative;
-  width: 640px;
-  height: 420px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 720px;
+  height: 500px;
 }
 
-.level1-intro-flow {
-  position: relative;
-  width: 520px;
-  height: 260px;
-}
+/* ---- 步骤1-3 共用元素 ---- */
 
-.level1-intro-line {
+/* 分类器居中（锚点） */
+.tut-classifier {
   position: absolute;
-  height: 4px;
-  border-radius: 2px;
-  background: linear-gradient(90deg, rgba(96, 165, 250, 0.1), rgba(96, 165, 250, 0.9), rgba(96, 165, 250, 0.1));
-  box-shadow: 0 0 16px rgba(96, 165, 250, 0.6);
-}
-
-.level1-intro-line.input {
-  left: 20px;
-  top: 130px;
-  width: 210px;
-}
-
-.level1-intro-line.output-top {
-  left: 300px;
-  top: 95px;
-  width: 180px;
-  transform: rotate(-18deg);
-  transform-origin: left center;
-}
-
-.level1-intro-line.output-bottom {
-  left: 300px;
-  top: 165px;
-  width: 180px;
-  transform: rotate(18deg);
-  transform-origin: left center;
-}
-
-.level1-intro-classifier {
-  position: absolute;
-  left: 220px;
-  top: 85px;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
   width: 110px;
   height: 110px;
   border-radius: 12px;
   overflow: hidden;
   border: 2px solid rgba(96, 165, 250, 0.8);
-  box-shadow: 0 0 24px rgba(96, 165, 250, 0.45);
+  box-shadow: 0 0 30px rgba(96, 165, 250, 0.5);
+  animation: tutGlow 2s ease-in-out infinite;
+}
+.tut-classifier img { width: 100%; height: 100%; object-fit: cover; }
+
+@keyframes tutGlow {
+  0%,100% { box-shadow: 0 0 16px rgba(96,165,250,0.3); }
+  50%     { box-shadow: 0 0 36px rgba(96,165,250,0.65); }
 }
 
-.level1-intro-classifier img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.level1-intro-particle {
+/* 数据流粒子（左侧） */
+.tut-particles {
   position: absolute;
-  width: 10px;
-  height: 10px;
+  left: 40px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 160px;
+  height: 20px;
+}
+
+.tut-p {
+  position: absolute;
+  width: 8px;
+  height: 8px;
   border-radius: 2px;
-  background: #ef4444;
-  box-shadow: 0 0 12px rgba(239, 68, 68, 0.9);
-  animation: level1IntroParticle 2s linear infinite;
+  top: 6px;
+  animation: tutFly 1.8s linear infinite;
+}
+.tut-p.p1 { background: #ef4444; left: 0; animation-delay: 0s; }
+.tut-p.p2 { background: #3b82f6; left: 0; animation-delay: 0.6s; }
+.tut-p.p3 { background: #facc15; left: 0; animation-delay: 1.2s; }
+
+@keyframes tutFly {
+  0%   { left: 0;    opacity: 0; }
+  12%  { opacity: 1; }
+  60%  { left: 140px; opacity: 1; }
+  80%  { opacity: 0.6; left: 180px; }
+  100% { left: 220px; opacity: 0; }
 }
 
-.level1-intro-particle.p1 { animation-delay: 0s; }
-.level1-intro-particle.p2 { animation-delay: 0.5s; }
-.level1-intro-particle.p3 { animation-delay: 1s; }
-
-.level1-intro-hint {
+/* 数据流横线 */
+.tut-flow-line {
   position: absolute;
-  bottom: 52px;
+  left: 56px;
+  top: 50%;
+  width: 180px;
+  height: 2px;
+  margin-top: -1px;
+  background: linear-gradient(90deg, rgba(96,165,250,0.7), rgba(96,165,250,0.1));
+  border-radius: 1px;
+}
+
+/* 处理文字（分类器右下方） */
+.tut-process-text {
+  position: absolute;
   left: 50%;
+  top: calc(50% + 75px);
   transform: translateX(-50%);
-  color: #ffffff;
-  font-size: 24px;
+  color: #93c5fd;
+  font-size: 15px;
   font-weight: 600;
-  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.55);
-  animation: level1IntroUp 0.4s ease;
-  text-align: center;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+  white-space: nowrap;
+  animation: tutFadeUp 0.4s ease;
 }
 
-.level1-intro-targets {
+/* 分流区域（右侧） */
+.tut-split {
   position: absolute;
-  bottom: 8px;
-  left: 50%;
-  transform: translateX(-50%);
+  left: calc(50% + 110px);
+  top: 50%;
+  transform: translateY(-50%);
   display: flex;
-  gap: 24px;
-  font-size: 18px;
-  font-weight: 600;
-  color: #dbeafe;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
-  animation: level1IntroUp 0.4s ease;
+  flex-direction: column;
+  gap: 70px;
+  animation: tutPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.level1-intro-solution {
+.tut-split-top, .tut-split-bottom {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tut-split-top .tut-arrow { color: #34d399; font-size: 22px; font-weight: 900; }
+.tut-split-bottom .tut-arrow { color: #f87171; font-size: 22px; font-weight: 900; }
+
+.tut-split-top .tut-label { color: #6ee7b7; font-size: 17px; font-weight: 700; white-space: nowrap; }
+.tut-split-bottom .tut-label { color: #fca5a5; font-size: 17px; font-weight: 700; white-space: nowrap; }
+
+/* 分叉线 */
+.tut-line-top, .tut-line-bottom {
+  position: absolute;
+  height: 2px;
+  left: calc(50% + 55px);
+  border-radius: 1px;
+}
+.tut-line-top {
+  width: 70px;
+  top: calc(50% - 42px);
+  background: linear-gradient(90deg, rgba(96,165,250,0.5), rgba(52,211,153,0.8));
+  transform: rotate(-20deg);
+  transform-origin: left center;
+}
+.tut-line-bottom {
+  width: 70px;
+  top: calc(50% + 42px);
+  background: linear-gradient(90deg, rgba(96,165,250,0.5), rgba(248,113,113,0.8));
+  transform: rotate(20deg);
+  transform-origin: left center;
+}
+
+/* ---- 步骤4：总结 ---- */
+.tut-summary {
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 20px;
+  justify-content: center;
+  gap: 14px;
+  animation: tutFadeUp 0.5s ease;
 }
 
-.level1-intro-solution-text {
-  color: #ffffff;
-  font-size: 28px;
+.tut-summary-icon {
+  width: 90px; height: 90px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 2px solid rgba(96,165,250,0.7);
+  box-shadow: 0 0 20px rgba(96,165,250,0.4);
+}
+.tut-summary-icon img { width: 100%; height: 100%; object-fit: cover; }
+
+.tut-summary-title {
+  color: #fff;
+  font-size: 26px;
   font-weight: 700;
   text-align: center;
-  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.65);
+  text-shadow: 0 2px 12px rgba(0,0,0,0.6);
+}
+.tut-highlight { color: #34d399; }
+
+.tut-summary-desc {
+  color: #cbd5e1;
+  font-size: 15px;
+  text-align: center;
+  line-height: 1.7;
 }
 
-.level1-intro-highlight {
-  color: #34d399;
-}
-
-.level1-intro-btn {
+.tut-btn {
   padding: 12px 34px;
-  border: 2px solid rgba(52, 211, 153, 0.85);
+  border: 2px solid rgba(52,211,153,0.85);
   border-radius: 10px;
   font-size: 18px;
   font-weight: 700;
-  color: #ffffff;
-  background: rgba(52, 211, 153, 0.25);
+  color: #fff;
+  background: rgba(52,211,153,0.25);
   cursor: pointer;
   transition: all 0.2s ease;
+  margin-top: 6px;
 }
-
-.level1-intro-btn:hover {
-  background: rgba(52, 211, 153, 0.45);
+.tut-btn:hover {
+  background: rgba(52,211,153,0.45);
   transform: translateY(-2px);
 }
 
-.level1-intro-skip-btn {
+/* Skip 按钮 */
+.tut-skip-btn {
   position: fixed;
-  right: 28px;
-  bottom: 28px;
-  padding: 10px 22px;
-  border: 2px solid rgba(255, 255, 255, 0.8);
-  border-radius: 8px;
-  font-size: 15px;
-  font-weight: 700;
+  bottom: 30px;
+  right: 30px;
+  padding: 10px 24px;
+  font-size: 16px;
+  font-weight: 600;
   background: transparent;
-  color: rgba(255, 255, 255, 0.95);
+  border: 2px solid rgba(255,255,255,0.8);
+  border-radius: 8px;
+  color: rgba(255,255,255,0.9);
   cursor: pointer;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  transition: all 0.2s ease;
   z-index: 2100;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.tut-skip-btn:hover {
+  background: rgba(255,255,255,0.15);
+  border-color: #fff;
+  color: #fff;
+  transform: translateY(-2px);
 }
 
-.level1-intro-skip-btn:hover {
-  background: rgba(255, 255, 255, 0.16);
-  border-color: #ffffff;
-}
-
-@keyframes level1IntroFadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes level1IntroUp {
-  from {
-    opacity: 0;
-    transform: translateX(-50%) translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
-}
-
-@keyframes level1IntroParticle {
-  0% {
-    left: 30px;
-    top: 125px;
-    opacity: 0;
-  }
-  8% { opacity: 1; }
-  45% {
-    left: 260px;
-    top: 125px;
-    opacity: 1;
-  }
-  72% {
-    left: 390px;
-    top: 88px;
-    opacity: 1;
-  }
-  100% {
-    left: 485px;
-    top: 70px;
-    opacity: 0;
-  }
-}
+/* 关键帧 */
+@keyframes tutFadeIn { from { opacity:0; } to { opacity:1; } }
+@keyframes tutFadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+@keyframes tutPop { from { opacity:0; transform:translateY(-50%) scale(0.6); } to { opacity:1; transform:translateY(-50%) scale(1); } }
 
 .module-progress-indicator {
   position: fixed;
@@ -943,4 +955,54 @@
   100% {
     box-shadow: 0 0 0 0 rgba(56, 189, 248, 0), 0 0 16px rgba(56, 189, 248, 0.35);
   }
+}
+
+/* 查看全部引导按钮 */
+.level1-tutorial-page .show-all-guides-btn {
+  position: fixed;
+  bottom: 30px;
+  left: 212px;
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 700;
+  background: rgba(139, 92, 246, 0.2);
+  border: 1px solid rgba(139, 92, 246, 0.5);
+  border-radius: 20px;
+  color: #c4b5fd;
+  cursor: pointer;
+  z-index: 100;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.level1-tutorial-page .show-all-guides-btn:hover {
+  background: rgba(139, 92, 246, 0.35);
+  border-color: rgba(139, 92, 246, 0.7);
+  transform: translateY(-2px);
+}
+
+/* 引导弹窗滚动条美化 */
+.guide-scroll-content {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.guide-scroll-content::-webkit-scrollbar {
+  width: 5px;
+}
+
+.guide-scroll-content::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+
+.guide-scroll-content::-webkit-scrollbar-thumb {
+  background: rgba(96, 165, 250, 0.35);
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.guide-scroll-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(96, 165, 250, 0.6);
 }
